@@ -1,7 +1,16 @@
+import { Link, useNavigate} from "react-router-dom"
 import NavbarLogin_Signup from "../components/NavbarLogin_Signup";
 import Logo from "../assets/logo.png";
 
 export default function Login() {
+  const navigate = useNavigate();
+  
+  const handleLogin = () => {
+    // Add login validation here
+    // If login successful proceed to navigate
+    navigate("/home");
+  }
+
   return (
     <>
       <NavbarLogin_Signup />
@@ -29,20 +38,22 @@ export default function Login() {
         </div>
 
         {/* Forgot password link */}
-        <a href="#" className="inline-block text-[#01165A] text-sm my-6 hover:underline">
+        <Link to="/forgot_password" className="inline-block text-[#01165A] text-sm my-6 hover:underline">
           Forgot Password?
-        </a>
+        </Link>
 
         {/* Signin button */}
-        <button className="border border-black bg-[#00BC3A] text-white text-sm font-bold p-2 rounded-md w-full max-w-xs mx-auto hover:bg-[#00a732] transition">
+        <button
+          onClick={handleLogin}
+          className="border border-black bg-[#00BC3A] text-white text-sm font-bold p-2 rounded-md w-full max-w-xs mx-auto hover:bg-[#00a732] transition cursor-pointer">
           SIGN IN
         </button>
 
         <p className="text-sm my-6">
           Don't have an account?{" "}
-          <a href="#" className="text-[#01165A] hover:underline">
+          <Link to="/signup" className="text-[#01165A] hover:underline">
             Sign up here
-          </a>
+          </Link>
         </p>
       </div>
     </>
