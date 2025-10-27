@@ -28,12 +28,12 @@ export default function Login() {
           <input
             type="text"
             placeholder="Email Address"
-            className="border rounded-md p-2 text-sm w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-[#00BC3A]"
+            className="border rounded-md p-2 text-sm w-full max-w-xs focus:outline-none focus:ring-1 focus:ring-[#2b2b2b]"
           />
           <input
             type="password"
             placeholder="Password"
-            className="border rounded-md p-2 text-sm w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-[#00BC3A]"
+            className="border rounded-md p-2 text-sm w-full max-w-xs focus:outline-none focus:ring-1 focus:ring-[#2b2b2b]"
           />
         </div>
 
@@ -45,7 +45,7 @@ export default function Login() {
         {/* Signin button */}
         <button
           onClick={handleLogin}
-          className="border border-black bg-[#00BC3A] text-white text-sm font-bold p-2 rounded-md w-full max-w-xs mx-auto hover:bg-[#00a732] transition cursor-pointer">
+          className="bg-[#00BC3A] text-white text-sm font-bold p-2 rounded-md w-full max-w-xs mx-auto hover:bg-[#00a732] transition cursor-pointer">
           SIGN IN
         </button>
 
