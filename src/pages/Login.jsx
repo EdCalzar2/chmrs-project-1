@@ -16,7 +16,7 @@ export default function Login() {
       <NavbarLogin_Signup />
 
       {/* Center logo */}
-      <img src={Logo} alt="logo" className="mx-auto w-24 sm:w-32 md:w-40" />
+      <img src={Logo} alt="logo" className="mx-auto w-40 h-40 mt-16 md:w-40 md:h-40" />
       {/* w-24 = small on phones, bigger on tablet/desktop */}
 
       {/* Login card */}
