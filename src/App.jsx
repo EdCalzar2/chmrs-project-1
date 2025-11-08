@@ -1,11 +1,11 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import ForgotPassword from "./pages/ForgotPassword";
-import Home from "./pages/Home";
-import ViewReports from "./pages/ViewReports";
-import ReportHazard from "./pages/ReportHazard";
-import Emergency from "./pages/Emergency";
+import Login from "./pages/Login.jsx";
+import Signup from "./pages/Signup.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import Home from "./pages/Home.jsx";
+import ViewReports from "./pages/ViewReports.jsx";
+import ReportHazard from "./pages/ReportHazard.jsx";
+import Emergency from "./pages/Emergency.jsx";
 
 export default function App() {
   return (
