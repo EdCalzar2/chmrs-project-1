@@ -6,6 +6,7 @@ import Home from "./pages/Home.jsx";
 import ViewReports from "./pages/ViewReports.jsx";
 import ReportHazard from "./pages/ReportHazard.jsx";
 import Emergency from "./pages/Emergency.jsx";
+import AdminManageReports from "./pages/AdminManageReports.jsx";
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/view_reports" element={<ViewReports/>}></Route>
         <Route path="/report_hazard" element={<ReportHazard/>}></Route>
         <Route path="/emergency" element={<Emergency/>}></Route>
+        <Route path="/admin_manage_reports" element={<AdminManageReports/>}></Route>
       </Routes>
     </BrowserRouter>
   )

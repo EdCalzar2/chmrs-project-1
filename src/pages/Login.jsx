@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import NavbarLogin_Signup from "../components/NavbarLogin_Signup";
+import Navbar from "../components/Navbar";
 import Logo from "../assets/logo.png";
 import { useState } from "react";
 
@@ -9,21 +9,29 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleEmail = (e) => setEmail(e.target.value);
-  const handlePassword = (e) => setPassword(e.target.value);
-
+  const handleEmail = (e) => {
+    setEmail(e.target.value);
+  }
+  const handlePassword = (e) => {
+    setPassword(e.target.value);
+  }
   const handleLogin = (e) => {
     e.preventDefault(); // prevent page reload
     if (email === "test@gmail.com" && password === "123") {
       navigate("/home");
-    } else {
+    } 
+    else if (email === "admin@gmail.com" && password == "123") {
+      navigate("/admin_manage_reports");
+    }
+    
+    else {
       alert("Invalid email or password");
     }
   };
 
   return (
     <>
-      <NavbarLogin_Signup />
+      <div className="bg-[#01165A] h-18 w-full"/>
       <img src={Logo} alt="logo" className="mx-auto w-24 sm:w-32 md:w-40" />
 
       <div className="bg-white p-6 sm:p-8 text-center w-11/12 sm:w-full max-w-sm mx-auto rounded-lg shadow-md">
