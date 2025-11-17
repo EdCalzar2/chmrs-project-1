@@ -98,16 +98,6 @@ export default function ViewReports() {
                 <span className="font-semibold">Status:</span> {report.status}
               </p>
               <p className="text-gray-900 mb-6">{report.description}</p>
-              {/* <div className="flex gap-2 flex-wrap">
-                {report.photos.map((photo, index) => (
-                  <img
-                    key={index}
-                    src={photo}
-                    alt="Attached"
-                    className="w-24 h-24 object-cover rounded-lg border"
-                  />
-                ))}
-              </div> */}
               <p className="text-gray-500 mt-4">Date Submitted: {report.dateSubmitted}</p>
             </div>
           ))
