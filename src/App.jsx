@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import ForgotPassword from "./pages/ForgotPassword";
-import Home from "./pages/Home";
-import ViewReports from "./pages/ViewReports";
-import ReportHazard from "./pages/ReportHazard";
-import Emergency from "./pages/Emergency";
+import Login from "./pages/Login.jsx";
+import Signup from "./pages/Signup.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import Home from "./pages/Home.jsx";
+import ViewReports from "./pages/ViewReports.jsx";
+import ReportHazard from "./pages/ReportHazard.jsx";
+import Emergency from "./pages/Emergency.jsx";
+import AdminManageReports from "./pages/AdminManageReports.jsx";
+import ReportHazardDetails from "./pages/ReportHazardDetails.jsx";
 
 export default function App() {
   return (
@@ -17,7 +19,9 @@ export default function App() {
         <Route path="/home" element={<Home/>}></Route>
         <Route path="/view_reports" element={<ViewReports/>}></Route>
         <Route path="/report_hazard" element={<ReportHazard/>}></Route>
+        <Route path="/report_hazard_details" element={<ReportHazardDetails/>}></Route>
         <Route path="/emergency" element={<Emergency/>}></Route>
+        <Route path="/admin_manage_reports" element={<AdminManageReports/>}></Route>
       </Routes>
     </BrowserRouter>
   )
