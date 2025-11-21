@@ -8,6 +8,7 @@ import ReportHazard from "./pages/ReportHazard.jsx";
 import Emergency from "./pages/Emergency.jsx";
 import AdminManageReports from "./pages/AdminManageReports.jsx";
 import ReportHazardDetails from "./pages/ReportHazardDetails.jsx";
+import AdminReportAnalytics from "./pages/AdminReportAnalytics.jsx";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/report_hazard_details" element={<ReportHazardDetails/>}></Route>
         <Route path="/emergency" element={<Emergency/>}></Route>
         <Route path="/admin_manage_reports" element={<AdminManageReports/>}></Route>
+        <Route path="/admin_report_analytics" element={<AdminReportAnalytics/>}></Route>
       </Routes>
     </BrowserRouter>
   )

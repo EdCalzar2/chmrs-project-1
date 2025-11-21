@@ -68,7 +68,8 @@ export default function ReportHazard() {
                       }
                     `}
                   >
-                    {hazard}
+                    {/* Show or render buttons */}
+                    {hazard} 
                   </button>
                 ))}
               </div>
