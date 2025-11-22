@@ -17,10 +17,10 @@ export default function Login() {
   }
   const handleLogin = (e) => {
     e.preventDefault();
-    if (email === "user@gmail.com" && password === "123") {
+    if (email === "user" && password === "123") {
       navigate("/home");
     } 
-    else if (email === "admin@gmail.com" && password == "123") {
+    else if (email === "admin" && password == "123") {
       navigate("/admin_manage_reports");
     }
     else {

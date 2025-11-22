@@ -1,4 +1,4 @@
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,6 +9,7 @@ import Navbar from "../components/Navbar";
 export default function ReportHazardDetails() {
     const location = useLocation();
     const { hazard } = location.state || {};
+    const navigate = useNavigate();
 
     const severity = ["Minor", "Moderate", "Critical"];
     const [activeSeverity, setActiveSeverity] = useState(null);
@@ -17,7 +18,8 @@ export default function ReportHazardDetails() {
     const [termsChecked, setTermsChecked] = useState(false);
     const [description, setDescription] = useState("");
     const locationPin = null; 
-    const [submitted, setSubmitted] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     // Adding multiple files (photos)
     const handleChange = (e) => {
@@ -30,7 +32,8 @@ export default function ReportHazardDetails() {
         setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
     };
 
-    const submitReport = () => {
+    // When user confirms in the modal, perform persistence and show success modal
+    const performSubmit = () => {
         const reportData = {
             hazard,
             description,
@@ -42,19 +45,24 @@ export default function ReportHazardDetails() {
 
         console.log("Submitting report:", reportData);
 
-        // Saving to localStorage (append)
         try {
             const key = "chmrs_reports";
-            const raw = localStorage.getItem(key); // Retrieve what is stored at localStorage
-            const existing = raw ? JSON.parse(raw) : []; // Converts string to an array
-            existing.push(reportData); // Adds new report to the array
-            localStorage.setItem(key, JSON.stringify(existing)); // Convert array back into string
+            const raw = localStorage.getItem(key);
+            const existing = raw ? JSON.parse(raw) : [];
+            existing.push(reportData);
+            localStorage.setItem(key, JSON.stringify(existing));
         } catch (e) {
             console.error("Failed to persist report", e);
         }
 
-        // Keep user on this page
-        setSubmitted(true);
+        setShowConfirmModal(false);
+        setShowSuccessModal(true);
+    };
+
+    const handleCancelConfirm = () => setShowConfirmModal(false);
+    const handleCloseSuccess = () => {
+        setShowSuccessModal(false);
+        navigate("/home");
     };
 
     return (
@@ -72,11 +80,7 @@ export default function ReportHazardDetails() {
             <div className="grid">
                 <h2 className="mt-10 md:mt-0 text-center text-2xl font-bold">{hazard}</h2>
 
-                {submitted && (
-                    <div className="mt-4 mx-auto text-center bg-green-100 text-green-800 px-4 py-2 rounded-md w-fit">
-                        Report submitted successfully.
-                    </div>
-                )}
+                {/* keep submitted message hidden — modal flow used instead */}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 mt-5 md:mt-10 md:justify-items-center">
                     <div>
@@ -112,7 +116,7 @@ export default function ReportHazardDetails() {
                         </div>
 
                         <button
-                            onClick={submitReport}
+                            onClick={() => setShowConfirmModal(true)}
                             disabled={!termsChecked}
                             className="bg-[#00BC3A] hover:bg-[#009730] transition-all duration-300 ease-in-out py-2 px-18 rounded-full text-white cursor-pointer mb-28 shadow-[0px_2px_5px_rgba(0,0,0,0.25)] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -192,6 +196,50 @@ export default function ReportHazardDetails() {
                         </div>
                     </div>
                 </div>
+                {/* Confirmation Modal */}
+                {showConfirmModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                        <div className="bg-white rounded-lg p-6 w-11/12 max-w-md">
+                            <h3 className="text-lg font-semibold">Confirm Submission</h3>
+                            <p className="mt-2 text-sm text-muted-foreground">
+                                Are you sure you want to submit this report? This action will save the
+                                report to your device.
+                            </p>
+                            <div className="mt-4 flex justify-end space-x-2">
+                                <button
+                                    onClick={handleCancelConfirm}
+                                    className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={performSubmit}
+                                    className="px-4 py-2 rounded-md bg-[#00BC3A] text-white hover:bg-[#009730]"
+                                >
+                                    Confirm
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Success Modal */}
+                {showSuccessModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                        <div className="bg-white rounded-lg p-6 w-11/12 max-w-sm text-center">
+                            <h3 className="text-lg font-semibold">Report Submitted</h3>
+                            <p className="mt-2 text-sm text-muted-foreground">Your report was submitted successfully.</p>
+                            <div className="mt-4 flex justify-center">
+                                <button
+                                    onClick={handleCloseSuccess}
+                                    className="px-4 py-2 rounded-md bg-[#01165A] text-white hover:bg-[#022072]"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </>
     );

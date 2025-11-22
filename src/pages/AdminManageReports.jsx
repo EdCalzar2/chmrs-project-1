@@ -96,12 +96,12 @@ export default function AdminManageReports() {
                 <h1 className="text-black/50">Report ID: {index + 1}</h1>
 
                 {/* Delete button */}
-                <button
+                {/* <button
                   onClick={() => handleDelete(index)}
                   className="ml-auto text-sm text-red-600 hover:text-red-800 bg-red-50 px-3 py-1 rounded-md"
                 >
                   Delete
-                </button>
+                </button> */}
               </div>
 
               <p className="my-4">{report.description}</p>
