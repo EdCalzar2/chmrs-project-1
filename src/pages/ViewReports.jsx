@@ -4,7 +4,7 @@ import Navbar from "../components/Navbar";
 export default function ViewReports() {
   const [activeFilter, setActiveFilter] = useState("All");
 
-  // Example mock data (you can replace with real data from backend later)
+  // Replace with backend data
   const reports = [
     {
       id: 1,

@@ -16,14 +16,13 @@ export default function Login() {
     setPassword(e.target.value);
   }
   const handleLogin = (e) => {
-    e.preventDefault(); // prevent page reload
-    if (email === "test@gmail.com" && password === "123") {
+    e.preventDefault();
+    if (email === "user" && password === "123") {
       navigate("/home");
     } 
-    else if (email === "admin@gmail.com" && password == "123") {
+    else if (email === "admin" && password == "123") {
       navigate("/admin_manage_reports");
     }
-    
     else {
       alert("Invalid email or password");
     }
