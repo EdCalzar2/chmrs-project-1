@@ -1,52 +1,23 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import Navbar from "../components/Navbar";
 
 export default function ViewReports() {
   const [activeFilter, setActiveFilter] = useState("All");
 
-  // Replace with backend data
-  const reports = [
-    {
-      id: 1,
-      status: "Submitted",
-      hazard: "Broken Street Light",
-      description: "The lamp post near the park has been broken for a week.",
-      severity: "Minor",
-      dateSubmitted: new Date().toLocaleString(),
-      photos: ["https://via.placeholder.com/150"],
-    },
-    {
-      id: 2,
-      status: "Under Review",
-      hazard: "Pothole",
-      description: "A man has been loitering near the bus stop at night.",
-      severity: "Moderate",
-      dateSubmitted: new Date().toLocaleString(),
-      photos: ["https://via.placeholder.com/150"]
-    },
-    {
-      id: 3,
-      status: "Resolved",
-      hazard: "Clogged Drainage",
-      description: "Incident near 5th street resolved by authorities.",
-      severity: "Critical",
-      dateSubmitted: new Date().toLocaleString(),
-      photos: ["https://via.placeholder.com/150"]
-    },
-    {
-      id: 4,
-      status: "In Progress",
-      hazard: "Entangled Wires",
-      description: "The camera in alley 12A is not functioning.",
-      dateSubmitted: new Date().toLocaleString(),    
-      severity: "Moderate",
-      photos: ["https://via.placeholder.com/150"]
-    },
-  ];
+  // Load reports from persisted storage (no sample fallback)
+  const [reports] = useState(() => {
+    try {
+      const raw = localStorage.getItem("chmrs_reports");
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
 
-  const filters = ["All", "Submitted", "Under Review", "In Progress", "Resolved"];
+  const filters = ["All", "Submitted", "Under Review", "In Progress", "Resolved", "Invalid"];
 
-  // Filter logic
+  // Filter logic (works with persisted reports that use `status` field)
   const filteredReports =
     activeFilter === "All"
       ? reports
@@ -98,7 +69,7 @@ export default function ViewReports() {
                 <span className="font-semibold">Status:</span> {report.status}
               </p>
               <p className="text-gray-900 mb-6">{report.description}</p>
-              <p className="text-gray-500 mt-4">Date Submitted: {report.dateSubmitted}</p>
+              <p className="text-gray-500 mt-4">Date Submitted: {report.dateSubmitted || (report.date ? new Date(report.date).toLocaleString() : 'N/A')}</p>
             </div>
           ))
         ) : (

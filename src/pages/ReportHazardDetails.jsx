@@ -40,6 +40,7 @@ export default function ReportHazardDetails() {
             severity: activeSeverity,
             photos: files.map((f) => f.name),
             location: locationPin,
+            status: "Submitted",
             date: new Date().toISOString(),
         };
 

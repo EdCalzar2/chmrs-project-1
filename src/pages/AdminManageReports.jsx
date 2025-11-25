@@ -5,6 +5,9 @@ export default function AdminManageReports() {
   const location = useLocation(); // Get the data from another page
   const reportsFromState = location.state?.reports; // This will contain the reports
 
+  const [showModal, setShowModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
+
   const [reports, setReports] = useState(() => {
     try {
       const raw = localStorage.getItem("chmrs_reports"); // Load from the local storage
@@ -53,6 +56,13 @@ export default function AdminManageReports() {
           </Link>
           <hr />
           <Link
+            to="/admin_activity_log"
+            className="hover:bg-white hover:text-[#01165A] transition-all duration-200 text-sm py-7"
+          >
+            Activity Log
+          </Link>
+          <hr />
+          <Link
             to="/"
             className="hover:bg-white hover:text-[#01165A] transition-all duration-200 text-sm py-7"
           >
@@ -76,13 +86,13 @@ export default function AdminManageReports() {
               key={index}
               className="bg-white rounded-2xl p-6 shadow-[0px_5px_5px_rgba(0,0,0,0.25)] hover:shadow-[0px_10px_15px_rgba(0,0,0,0.25)] transition ml-16 w-250"
             >
-              <div className="flex items-baseline gap-x-4">
-                <h1 className="font-bold">{report.hazard}</h1>
+              <div className="flex items-baseline gap-x-3">
+                <h1 className="font-bold uppercase">{report.hazard}</h1>
 
                 {/* Severity badge */}
                 <h1
                   className={
-                    `px-4 py-1 rounded-full text-white ` +
+                    `px-3 rounded-full text-white ` +
                     (report.severity === "Minor"
                       ? "bg-yellow-500 border-yellow-600"
                       : report.severity === "Moderate"
@@ -94,65 +104,116 @@ export default function AdminManageReports() {
                 </h1>
 
                 <h1 className="text-black/50">Report ID: {index + 1}</h1>
-
-                {/* Delete button */}
-                {/* <button
-                  onClick={() => handleDelete(index)}
-                  className="ml-auto text-sm text-red-600 hover:text-red-800 bg-red-50 px-3 py-1 rounded-md"
-                >
-                  Delete
-                </button> */}
               </div>
 
-              <p className="my-4">{report.description}</p>
+              {/* Status under hazard title */}
+              
+                {report.status && (
+                  <div className="flex items-center my-2">
+                    <span className="text-black mr-1 font-bold">Status:</span>
+                    <span
+                      className={`rounded-full font-medium` +
+                        (report.status === "Submitted" ? "text-black" : "text-gray-600 bg-gray-100")}
+                    >
+                      {report.status}
+                    </span>
+                  </div>
+                )}
 
-              {/* Photos */}
-              {report.photos?.length > 0 && (
-                <div className="mt-4">
-                  <h1 className="font-bold mb-2">Photos:</h1>
-                    <div className="flex gap-3 flex-wrap">
-                        {report.photos.map((photo, i) => (
-                        <div key={i} className="text-center">
-                            {typeof photo === "string" ? (
-                            <>
-                                <img
-                                src={`https://via.placeholder.com/112x112?text=No+Preview`}
-                                alt={photo}
-                                className="w-28 h-28 object-cover rounded-lg border"
-                                />
-                                <div className="text-xs mt-1">{photo}</div>
-                            </>
-                            ) : (
-                            <img
-                                src={URL.createObjectURL(photo)}
-                                alt="Attachment"
-                                className="w-28 h-28 object-cover rounded-lg border"
-                            />
-                            )}
-                        </div>
-                        ))}
-                    </div>
-                </div>
-              )}
-
-              {/* Location */}
-              <div className="mt-4">
-                <h1 className="font-bold">Pinned Location:</h1>
-                <p className="text-sm text-gray-600">
-                  {report.location || "No location selected"}
-                </p>
-              </div>
-
-              <h1 className="mt-4 text-black/50">
+              <p className="text-black/50 mb-8 text-sm">{report.description}</p>
+              <h1 className="text-sm text-black/50">
                 Date:{" "}
                 {report.date
                   ? new Date(report.date).toLocaleString()
                   : new Date().toLocaleDateString()}
               </h1>
+
+              <div className="flex gap-2 items-center mt-2">
+                <button
+                  onClick={() => { setSelectedReport(report); setShowModal(true); }}
+                  className="text-sm text-blue-700 rounded-md cursor-pointer hover:underline"
+                >
+                  See more
+                </button>
+                
+                {/* Instead of delete, flag as invalid */}
+                <button
+                  onClick={() => handleDelete(index)}
+                  className="text-sm text-red-600 hover:text-red-800 bg-red-50 px-3 py-1 rounded-md"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* See More Modal */}
+      {showModal && selectedReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg p-6 w-11/12 max-w-lg">
+            <div className="flex items-baseline gap-x-3">
+              <h3 className="text-lg font-semibold">{selectedReport.hazard}</h3>
+              <h1
+                  className={
+                    `px-3 rounded-full text-white ` +
+                    (selectedReport.severity === "Minor"
+                      ? "bg-yellow-500 border-yellow-600"
+                      : selectedReport.severity === "Moderate"
+                      ? "bg-orange-500 border-orange-600"
+                      : "bg-red-500 border-red-600")
+                  }
+                >
+                  {selectedReport.severity}
+                </h1>
+            </div>
+
+            <div className="mt-1">
+              <div className="flex items-baseline">
+                <strong>Status:</strong>
+                <div className="ml-1 text-sm text-gray-700">{selectedReport.status || 'N/A'}</div>
+              </div>
+              
+              <p className="text-sm text-gray-600 my-3">{selectedReport.description}</p>
+
+              <div className>
+                <strong>Photos:</strong>
+                {selectedReport.photos && selectedReport.photos.length > 0 ? (
+                  <ul className="space-y-2">
+                    {selectedReport.photos.map((p, i) => (
+                      <li key={i} className="text-sm text-gray-700">{p}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-sm text-gray-500 mt-1">No photos attached</div>
+                )}
+              </div>
+
+              <div className="mt-2">
+                <strong>Location:</strong>
+                <div className="text-sm text-gray-700">{selectedReport.location || 'No location selected'}</div>
+              </div>
+
+              <div className="mt-2">
+                <strong>Date:</strong>
+                <div className="text-sm text-gray-700">{selectedReport.date ? new Date(selectedReport.date).toLocaleString() : 'N/A'}</div>
+              </div>
+
+              
+            </div>
+
+            <div className="mt-6 flex justify-start gap-x-2">
+              {/* Accept button will make the report's status under review */}
+              <button onClick={() => { setShowModal(false); setSelectedReport(null); }} className="px-4 py-2 bg-[#00BC3A] text-white rounded-md cursor-pointer">Accept</button>
+              {/* This button will flag the report as invalid */}
+              <button onClick={() => { setShowModal(false); setSelectedReport(null); }} className="px-4 py-2 bg-[#a52c2c] text-white rounded-md cursor-pointer">Mark as Invalid</button>
+              {/* Closes the modal */}
+              <button onClick={() => { setShowModal(false); setSelectedReport(null); }} className="px-4 py-2 bg-[#01165A] text-white rounded-md cursor-pointer">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

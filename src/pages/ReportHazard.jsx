@@ -8,7 +8,7 @@ export default function ReportHazard() {
 
   const hazardCategories = {
     "Infrastructure & Maintenance": [
-      "Pothhole",
+      "Pothole",
       "Faulty Drainage Cover",
       "Cracked Sidewalks",
       "Collapsing Wall",
