@@ -23,7 +23,8 @@ export default function App() {
         <Route path="/report_hazard_details" element={<ReportHazardDetails/>}></Route>
         <Route path="/emergency" element={<Emergency/>}></Route>
         <Route path="/admin_manage_reports" element={<AdminManageReports/>}></Route>
-        <Route path="/admin_report_analytics" element={<AdminReportAnalytics/>}></Route>
+        <Route path="/admin_report_analytics" element={<AdminReportAnalytics />}></Route>
+        <Route path="/admin_activity_log" element={<AdminReportAnalytics/>}></Route>
       </Routes>
     </BrowserRouter>
   )
