@@ -1,5 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import osm from "../utils/osm-providers.js";
+import L from "leaflet";
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconUrl: markerIcon,
+    iconRetinaUrl: markerIcon2x,
+    shadowUrl: markerShadow,
+});
 
 export default function AdminManageReports() {
   const location = useLocation();
@@ -30,7 +44,6 @@ export default function AdminManageReports() {
     }
   }, [reports]);
 
-  // Keep this for now
   const handleDelete = (index) => {
     if (!window.confirm("Are you sure you want to delete this report?")) return;
     setReports((prev) => prev.filter((_, i) => i !== index));
@@ -129,7 +142,6 @@ export default function AdminManageReports() {
     setSelectedReport(report);
     setSelectedIndex(index);
     setShowModal(true);
-    // Pre-fill fields if they exist in the report
     if (report.assignedTo) setAssignedTo(report.assignedTo);
     if (report.resolutionDetails) setResolutionDetails(report.resolutionDetails);
   };
@@ -182,7 +194,7 @@ export default function AdminManageReports() {
       </div>
 
       {/* CONTENT */}
-      <div className="ml-80 mt-28 p-4">
+      <div className="ml-120 mt-28 p-4">
         <div className="grid grid-cols-1 gap-y-6">
           {reports.length === 0 && (
             <p className="text-gray-500 text-center mt-10">No reports submitted yet.</p>
@@ -213,7 +225,7 @@ export default function AdminManageReports() {
               </div>
 
               {report.status && (
-                <div className="flex items-center my-2">
+                <div className="flex items-center mt-2 mb-4">
                   <span className="text-black mr-1 font-bold">Status:</span>
                   <span
                     className={`px-2 rounded-full font-medium ${
@@ -235,7 +247,11 @@ export default function AdminManageReports() {
                 </div>
               )}
 
-              <p className="text-black/50 mb-8 text-sm">{report.description}</p>
+              <p className="text-black/60 mb-4">
+                {report.description && report.description.length > 100
+                  ? report.description.substring(0, 60) + "..."
+                  : report.description}
+              </p>
               <h1 className="text-sm text-black/50">
                 Date:{" "}
                 {report.date
@@ -266,7 +282,7 @@ export default function AdminManageReports() {
       {/* MODALS - Different content based on status */}
       {showModal && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg p-6 w-11/12 max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-11/12 max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-baseline gap-x-3">
               <h3 className="text-lg font-semibold">{selectedReport.hazard}</h3>
               <h1
@@ -307,6 +323,37 @@ export default function AdminManageReports() {
 
               <p className="text-sm text-gray-600 my-3">{selectedReport.description}</p>
 
+              {/* Map Display */}
+              {selectedReport.location && selectedReport.location.lat && selectedReport.location.lng && (
+                <div className="my-4">
+                  <strong>Location:</strong>
+                  <div className="mt-2 h-[300px] border-2 border-gray-300 rounded-lg overflow-hidden">
+                    <MapContainer
+                      center={[selectedReport.location.lat, selectedReport.location.lng]}
+                      zoom={17}
+                      style={{ height: "100%", width: "100%" }}
+                      scrollWheelZoom={false}
+                    >
+                      <TileLayer
+                        url={osm.maptiler.url}
+                        attribution={osm.maptiler.attribution}
+                      />
+                      <Marker position={[selectedReport.location.lat, selectedReport.location.lng]} />
+                    </MapContainer>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Coordinates: {selectedReport.location.lat.toFixed(6)}, {selectedReport.location.lng.toFixed(6)}
+                  </p>
+                </div>
+              )}
+
+              {!selectedReport.location && (
+                <div className="my-2">
+                  <strong>Location:</strong>
+                  <div className="text-sm text-gray-500 mt-1">No location selected</div>
+                </div>
+              )}
+
               <div>
                 <strong>Photos:</strong>
                 {selectedReport.photos && selectedReport.photos.length > 0 ? (
@@ -320,13 +367,6 @@ export default function AdminManageReports() {
                 ) : (
                   <div className="text-sm text-gray-500 mt-1">No photos attached</div>
                 )}
-              </div>
-
-              <div className="mt-2">
-                <strong>Location:</strong>
-                <div className="text-sm text-gray-700">
-                  {selectedReport.location || "No location selected"}
-                </div>
               </div>
 
               <div className="mt-2">

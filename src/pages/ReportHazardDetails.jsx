@@ -5,11 +5,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { X, Plus } from "lucide-react";
 import Navbar from "../components/Navbar";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import osm from "../utils/osm-providers.js";
 
-// Fix for default marker icon issue with Webpack
+import { MapContainer, TileLayer } from "react-leaflet";
+import { EditControl } from "react-leaflet-draw";
+import { FeatureGroup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import "leaflet-draw/dist/leaflet.draw.css";
+import osm from "../utils/osm-providers.js";
 import L from "leaflet";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -21,17 +23,6 @@ L.Icon.Default.mergeOptions({
     iconRetinaUrl: markerIcon2x,
     shadowUrl: markerShadow,
 });
-
-// Component to handle map clicks
-function LocationMarker({ position, setPosition }) {
-    useMapEvents({
-        click(e) {
-            setPosition(e.latlng);
-        },
-    });
-
-    return position === null ? null : <Marker position={position} />;
-}
 
 export default function ReportHazardDetails() {
     const location = useLocation();
@@ -48,10 +39,50 @@ export default function ReportHazardDetails() {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-    // Map variables
-    const [center, setCenter] = useState({ lat: 14.411304531009822, lng: 120.95637202716605 });
-    const ZOOM_LEVEL = 20;
+    // Map
+    const [center, setCenter] = useState({ lat: 14.409317207568014, lng: 120.95662785624629 });
+    const ZOOM_LEVEL = 17;
     const mapRef = useRef();
+    const featureGroupRef = useRef();
+
+    // Handle marker creation from draw controls
+    const handleCreated = (e) => {
+        const { layerType, layer } = e;
+        
+        if (layerType === "marker") {
+            // Remove any existing markers before adding new one
+            if (featureGroupRef.current) {
+                featureGroupRef.current.clearLayers();
+            }
+            
+            // Add the new marker to the feature group
+            if (featureGroupRef.current) {
+                featureGroupRef.current.addLayer(layer);
+            }
+            
+            const { lat, lng } = layer.getLatLng();
+            setLocationPin({ lat, lng });
+            console.log("Marker created at:", { lat, lng });
+        }
+    };
+
+    // Handle marker edit
+    const handleEdited = (e) => {
+        const layers = e.layers;
+        layers.eachLayer((layer) => {
+            if (layer instanceof L.Marker) {
+                const { lat, lng } = layer.getLatLng();
+                setLocationPin({ lat, lng });
+                console.log("Marker edited to:", { lat, lng });
+            }
+        });
+    };
+
+    // Handle marker deletion
+    const handleDeleted = () => {
+        setLocationPin(null);
+        console.log("Marker deleted");
+    };
 
     // Adding multiple files (photos)
     const handleChange = (e) => {
@@ -116,6 +147,9 @@ export default function ReportHazardDetails() {
                 <div className="grid grid-cols-1 md:grid-cols-2 mt-5 md:mt-10 md:justify-items-center gap-8 px-4">
                     <div className="w-full max-w-2xl">
                         <h1 className="font-bold">Mark location</h1>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Click the marker icon in the top right to place a pin on the map
+                        </p>
                         <div className="mt-3 h-[400px] border-2 border-black/50 rounded-2xl overflow-hidden">
                             <MapContainer 
                                 center={center} 
@@ -123,11 +157,26 @@ export default function ReportHazardDetails() {
                                 ref={mapRef}
                                 style={{ height: "100%", width: "100%" }}
                             >
+                                <FeatureGroup ref={featureGroupRef}>
+                                    <EditControl 
+                                        position="topright" 
+                                        onCreated={handleCreated}
+                                        onEdited={handleEdited}
+                                        onDeleted={handleDeleted}
+                                        draw={{
+                                            rectangle: false, 
+                                            polygon: false, 
+                                            circle: false, 
+                                            circlemarker: false, 
+                                            polyline: false,
+                                            marker: true
+                                        }}
+                                    />
+                                </FeatureGroup>
                                 <TileLayer 
                                     url={osm.maptiler.url} 
                                     attribution={osm.maptiler.attribution} 
                                 />
-                                <LocationMarker position={locationPin} setPosition={setLocationPin} />
                             </MapContainer>
                         </div>
                         {locationPin && (
