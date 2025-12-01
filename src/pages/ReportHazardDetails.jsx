@@ -1,10 +1,37 @@
 import { useLocation, Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { X, Plus } from "lucide-react";
 import Navbar from "../components/Navbar";
+import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import osm from "../utils/osm-providers.js";
+
+// Fix for default marker icon issue with Webpack
+import L from "leaflet";
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconUrl: markerIcon,
+    iconRetinaUrl: markerIcon2x,
+    shadowUrl: markerShadow,
+});
+
+// Component to handle map clicks
+function LocationMarker({ position, setPosition }) {
+    useMapEvents({
+        click(e) {
+            setPosition(e.latlng);
+        },
+    });
+
+    return position === null ? null : <Marker position={position} />;
+}
 
 export default function ReportHazardDetails() {
     const location = useLocation();
@@ -17,9 +44,14 @@ export default function ReportHazardDetails() {
     const [files, setFiles] = useState([]);
     const [termsChecked, setTermsChecked] = useState(false);
     const [description, setDescription] = useState("");
-    const locationPin = null; 
+    const [locationPin, setLocationPin] = useState(null);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+    // Map variables
+    const [center, setCenter] = useState({ lat: 14.411304531009822, lng: 120.95637202716605 });
+    const ZOOM_LEVEL = 20;
+    const mapRef = useRef();
 
     // Adding multiple files (photos)
     const handleChange = (e) => {
@@ -81,21 +113,28 @@ export default function ReportHazardDetails() {
             <div className="grid">
                 <h2 className="mt-10 md:mt-0 text-center text-2xl font-bold">{hazard}</h2>
 
-                {/* keep submitted message hidden — modal flow used instead */}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 mt-5 md:mt-10 md:justify-items-center">
-                    <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 mt-5 md:mt-10 md:justify-items-center gap-8 px-4">
+                    <div className="w-full max-w-2xl">
                         <h1 className="font-bold">Mark location</h1>
-                        <div>
-
-                            
+                        <div className="mt-3 h-[400px] border-2 border-black/50 rounded-2xl overflow-hidden">
+                            <MapContainer 
+                                center={center} 
+                                zoom={ZOOM_LEVEL} 
+                                ref={mapRef}
+                                style={{ height: "100%", width: "100%" }}
+                            >
+                                <TileLayer 
+                                    url={osm.maptiler.url} 
+                                    attribution={osm.maptiler.attribution} 
+                                />
+                                <LocationMarker position={locationPin} setPosition={setLocationPin} />
+                            </MapContainer>
                         </div>
-                        {/* Placeholder map */}
-                        <img
-                            src="https://via.placeholder.com/200x200"
-                            alt="Map"
-                            className="w-150 h-100 border-2 border-black/50 rounded-2xl mt-3"
-                        />
+                        {locationPin && (
+                            <p className="mt-2 text-sm text-muted-foreground">
+                                Location: {locationPin.lat.toFixed(6)}, {locationPin.lng.toFixed(6)}
+                            </p>
+                        )}
 
                         <h1 className="mt-8 font-bold">Tell us what happened</h1>
                         <Textarea
@@ -128,7 +167,7 @@ export default function ReportHazardDetails() {
                         </button>
                     </div>
 
-                    <div>
+                    <div className="w-full max-w-2xl">
                         <h1 className="font-bold">Severity Level</h1>
 
                         <div className="grid grid-cols-3 gap-x-4">
@@ -162,7 +201,7 @@ export default function ReportHazardDetails() {
                             <div className="mt-4">
                                 <Label
                                     htmlFor="photos"
-                                    className="cursor-pointer bg-[#D9D9D9] hover:bg:white transition-all duration-200 px-4 py-2 rounded-md inline-block"
+                                    className="cursor-pointer bg-[#D9D9D9] hover:bg-white transition-all duration-200 px-4 py-2 rounded-md inline-block"
                                 >
                                     <Plus size={15} />
                                 </Label>
@@ -200,6 +239,7 @@ export default function ReportHazardDetails() {
                         </div>
                     </div>
                 </div>
+
                 {/* Confirmation Modal */}
                 {showConfirmModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
