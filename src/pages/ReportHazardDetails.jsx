@@ -85,8 +85,11 @@ export default function ReportHazardDetails() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 mt-5 md:mt-10 md:justify-items-center">
                     <div>
-                        <h1 className="font-bold">Choose location</h1>
+                        <h1 className="font-bold">Mark location</h1>
+                        <div>
 
+                            
+                        </div>
                         {/* Placeholder map */}
                         <img
                             src="https://via.placeholder.com/200x200"

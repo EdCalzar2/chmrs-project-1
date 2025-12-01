@@ -19,25 +19,22 @@ export default function ViewReports() {
 
   // Filter logic (works with persisted reports that use `status` field)
   const filteredReports =
-    activeFilter === "All"
+    activeFilter === "All" 
       ? reports
       : reports.filter((r) => r.status === activeFilter);
 
   // modal state for read-only user modal
   const [showModal, setShowModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
-  const [selectedIndex, setSelectedIndex] = useState(null);
 
-  const openModal = (report, idx) => {
+  const openModal = (report) => {
     setSelectedReport(report);
-    setSelectedIndex(idx);
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setSelectedReport(null);
-    setSelectedIndex(null);
   };
 
   
