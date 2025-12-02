@@ -24,6 +24,8 @@ export default function AdminManageReports() {
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [assignedTo, setAssignedTo] = useState("");
   const [resolutionDetails, setResolutionDetails] = useState("");
+  const [showInvalidModal, setShowInvalidModal] = useState(false);
+  const [invalidReason, setInvalidReason] = useState("");
 
   const [reports, setReports] = useState(() => {
     try {
@@ -112,24 +114,60 @@ export default function AdminManageReports() {
     }
   };
 
+  // open the invalid-reason input modal
   const handleMarkInvalid = () => {
-    if (selectedIndex !== null) {
-      setReports((prev) =>
-        prev.map((report, i) =>
-          i === selectedIndex ? { ...report, status: "Invalid" } : report
-        )
-      );
-      setShowModal(false);
-      setSelectedReport(null);
-      setSelectedIndex(null);
+    // show the input modal so admin can enter a reason
+    setInvalidReason(selectedReport?.invalidReason || "");
+    setShowInvalidModal(true);
+  };
+
+  // actually mark the selected report as invalid and persist reason/date
+  const confirmMarkInvalid = () => {
+    if (selectedIndex === null) return;
+    if (!invalidReason.trim()) {
+      alert("Please provide a reason for marking this report as invalid.");
+      return;
     }
+
+    setReports((prev) =>
+      prev.map((report, i) =>
+        i === selectedIndex
+          ? {
+              ...report,
+              status: "Invalid",
+              invalidReason: invalidReason.trim(),
+              invalidDate: new Date().toISOString(),
+            }
+          : report
+      )
+    );
+
+    // close both modals and reset selection
+    setShowInvalidModal(false);
+    setShowModal(false);
+    setSelectedReport(null);
+    setSelectedIndex(null);
+    setInvalidReason("");
+  };
+
+  const cancelMarkInvalid = () => {
+    setShowInvalidModal(false);
+    setInvalidReason("");
   };
 
   const handleReopen = () => {
     if (selectedIndex !== null) {
       setReports((prev) =>
         prev.map((report, i) =>
-          i === selectedIndex ? { ...report, status: "Under Review" } : report
+          i === selectedIndex
+            ? {
+                ...report,
+                status: "Under Review",
+                // clear invalid markers when reopening
+                invalidReason: undefined,
+                invalidDate: undefined,
+              }
+            : report
         )
       );
       setShowModal(false);
@@ -144,6 +182,7 @@ export default function AdminManageReports() {
     setShowModal(true);
     if (report.assignedTo) setAssignedTo(report.assignedTo);
     if (report.resolutionDetails) setResolutionDetails(report.resolutionDetails);
+    if (report.invalidReason) setInvalidReason(report.invalidReason);
   };
 
   const closeModal = () => {
@@ -152,6 +191,8 @@ export default function AdminManageReports() {
     setSelectedIndex(null);
     setAssignedTo("");
     setResolutionDetails("");
+    setInvalidReason("");
+    setShowInvalidModal(false);
   };
 
   return (
@@ -450,9 +491,17 @@ export default function AdminManageReports() {
               {selectedReport.status === "Invalid" && (
                 <div className="mt-4 p-3 bg-red-50 rounded-md">
                   <strong className="text-red-800">Reason for Invalidity:</strong>
-                  <p className="text-sm text-gray-700 mt-1">
-                    This report has been marked as invalid by the admin team.
+                  <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
+                    {selectedReport.invalidReason || "This report has been marked as invalid by the admin team."}
                   </p>
+                  {selectedReport.invalidDate && (
+                    <div className="mt-2">
+                      <strong className="text-red-800">Marked Invalid:</strong>
+                      <div className="text-sm text-gray-700">
+                        {new Date(selectedReport.invalidDate).toLocaleString()}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -533,6 +582,38 @@ export default function AdminManageReports() {
                 className="px-4 py-2 bg-[#01165A] text-white rounded-md cursor-pointer hover:bg-[#012050]"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invalid-reason modal (opened when admin wants to mark invalid) */}
+      {showInvalidModal && selectedReport && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg p-6 w-11/12 max-w-lg max-h-[80vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold">Reason to mark report as Invalid</h3>
+            <p className="text-sm text-gray-600 mt-1">Please enter a short reason explaining why this report is invalid.</p>
+
+            <textarea
+              value={invalidReason}
+              onChange={(e) => setInvalidReason(e.target.value)}
+              className="w-full mt-4 p-3 border border-gray-200 rounded-md text-sm h-36 resize-y"
+              placeholder="Enter reason here..."
+            />
+
+            <div className="mt-4 flex items-center gap-x-2 justify-end">
+              <button
+                onClick={cancelMarkInvalid}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmMarkInvalid}
+                className="px-4 py-2 bg-[#a52c2c] text-white rounded-md cursor-pointer hover:bg-[#8a2424]"
+              >
+                Confirm & Mark Invalid
               </button>
             </div>
           </div>
