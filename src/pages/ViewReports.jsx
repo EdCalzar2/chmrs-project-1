@@ -270,9 +270,17 @@ export default function ViewReports() {
               {selectedReport.status === "Invalid" && (
                 <div className="mt-4 p-3 bg-red-50 rounded-md">
                   <strong className="text-red-800">Reason for Invalidity:</strong>
-                  <p className="text-sm text-gray-700 mt-1">
-                    This report has been marked as invalid by the admin team.
+                  <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
+                    {selectedReport.invalidReason || "This report has been marked as invalid by the admin team."}
                   </p>
+                  {selectedReport.invalidDate && (
+                    <div className="mt-2">
+                      <strong className="text-red-800">Marked Invalid:</strong>
+                      <div className="text-sm text-gray-700">
+                        {new Date(selectedReport.invalidDate).toLocaleString()}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
