@@ -10,9 +10,9 @@ import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-    iconUrl: markerIcon,
-    iconRetinaUrl: markerIcon2x,
-    shadowUrl: markerShadow,
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
 });
 
 export default function AdminManageReports() {
@@ -31,7 +31,9 @@ export default function AdminManageReports() {
     try {
       const raw = localStorage.getItem("chmrs_reports");
       const persisted = raw ? JSON.parse(raw) : [];
-      return reportsFromState && reportsFromState.length > 0 ? reportsFromState : persisted;
+      return reportsFromState && reportsFromState.length > 0
+        ? reportsFromState
+        : persisted;
     } catch (e) {
       console.error("Failed to load persisted reports", e);
       return reportsFromState || [];
@@ -67,7 +69,9 @@ export default function AdminManageReports() {
   const handleMarkInProgress = () => {
     if (selectedIndex !== null) {
       if (!assignedTo.trim()) {
-        alert("Please assign a worker or department before marking as In Progress.");
+        alert(
+          "Please assign a worker or department before marking as In Progress."
+        );
         return;
       }
       setReports((prev) =>
@@ -181,7 +185,8 @@ export default function AdminManageReports() {
     setSelectedIndex(index);
     setShowModal(true);
     if (report.assignedTo) setAssignedTo(report.assignedTo);
-    if (report.resolutionDetails) setResolutionDetails(report.resolutionDetails);
+    if (report.resolutionDetails)
+      setResolutionDetails(report.resolutionDetails);
     if (report.invalidReason) setInvalidReason(report.invalidReason);
   };
 
@@ -235,10 +240,12 @@ export default function AdminManageReports() {
       </div>
 
       {/* CONTENT */}
-      <div className="ml-120 mt-28 p-4">
+      <div className="ml-82 mt-28 p-4">
         <div className="grid grid-cols-1 gap-y-6">
           {reports.length === 0 && (
-            <p className="text-gray-500 text-center mt-10">No reports submitted yet.</p>
+            <p className="text-gray-500 text-center mt-10">
+              No reports submitted yet.
+            </p>
           )}
 
           {reports.map((report, index) => (
@@ -362,36 +369,51 @@ export default function AdminManageReports() {
                 </div>
               </div>
 
-              <p className="text-sm text-gray-600 my-3">{selectedReport.description}</p>
+              <p className="text-sm text-gray-600 my-3">
+                {selectedReport.description}
+              </p>
 
               {/* Map Display */}
-              {selectedReport.location && selectedReport.location.lat && selectedReport.location.lng && (
-                <div className="my-4">
-                  <strong>Location:</strong>
-                  <div className="mt-2 h-[300px] border-2 border-gray-300 rounded-lg overflow-hidden">
-                    <MapContainer
-                      center={[selectedReport.location.lat, selectedReport.location.lng]}
-                      zoom={17}
-                      style={{ height: "100%", width: "100%" }}
-                      scrollWheelZoom={false}
-                    >
-                      <TileLayer
-                        url={osm.maptiler.url}
-                        attribution={osm.maptiler.attribution}
-                      />
-                      <Marker position={[selectedReport.location.lat, selectedReport.location.lng]} />
-                    </MapContainer>
+              {selectedReport.location &&
+                selectedReport.location.lat &&
+                selectedReport.location.lng && (
+                  <div className="my-4">
+                    <strong>Location:</strong>
+                    <div className="mt-2 h-[300px] border-2 border-gray-300 rounded-lg overflow-hidden">
+                      <MapContainer
+                        center={[
+                          selectedReport.location.lat,
+                          selectedReport.location.lng,
+                        ]}
+                        zoom={17}
+                        style={{ height: "100%", width: "100%" }}
+                        scrollWheelZoom={false}
+                      >
+                        <TileLayer
+                          url={osm.maptiler.url}
+                          attribution={osm.maptiler.attribution}
+                        />
+                        <Marker
+                          position={[
+                            selectedReport.location.lat,
+                            selectedReport.location.lng,
+                          ]}
+                        />
+                      </MapContainer>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Coordinates: {selectedReport.location.lat.toFixed(6)},{" "}
+                      {selectedReport.location.lng.toFixed(6)}
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Coordinates: {selectedReport.location.lat.toFixed(6)}, {selectedReport.location.lng.toFixed(6)}
-                  </p>
-                </div>
-              )}
+                )}
 
               {!selectedReport.location && (
                 <div className="my-2">
                   <strong>Location:</strong>
-                  <div className="text-sm text-gray-500 mt-1">No location selected</div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    No location selected
+                  </div>
                 </div>
               )}
 
@@ -406,7 +428,9 @@ export default function AdminManageReports() {
                     ))}
                   </ul>
                 ) : (
-                  <div className="text-sm text-gray-500 mt-1">No photos attached</div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    No photos attached
+                  </div>
                 )}
               </div>
 
@@ -420,19 +444,24 @@ export default function AdminManageReports() {
               </div>
 
               {/* Show assigned worker and in progress date for In Progress and Resolved statuses */}
-              {(selectedReport.status === "In Progress" || selectedReport.status === "Resolved") && (
+              {(selectedReport.status === "In Progress" ||
+                selectedReport.status === "Resolved") && (
                 <>
                   {selectedReport.assignedTo && (
                     <div className="mt-2">
                       <strong>Assigned To:</strong>
-                      <div className="text-sm text-gray-700">{selectedReport.assignedTo}</div>
+                      <div className="text-sm text-gray-700">
+                        {selectedReport.assignedTo}
+                      </div>
                     </div>
                   )}
                   {selectedReport.inProgressDate && (
                     <div className="mt-2">
                       <strong>Marked In Progress:</strong>
                       <div className="text-sm text-gray-700">
-                        {new Date(selectedReport.inProgressDate).toLocaleString()}
+                        {new Date(
+                          selectedReport.inProgressDate
+                        ).toLocaleString()}
                       </div>
                     </div>
                   )}
@@ -458,7 +487,9 @@ export default function AdminManageReports() {
               {/* Additional fields for "In Progress" status */}
               {selectedReport.status === "In Progress" && (
                 <div className="mt-4 p-3 bg-purple-50 rounded-md">
-                  <strong className="text-purple-800">Resolution Details:</strong>
+                  <strong className="text-purple-800">
+                    Resolution Details:
+                  </strong>
                   <textarea
                     value={resolutionDetails}
                     onChange={(e) => setResolutionDetails(e.target.value)}
@@ -472,7 +503,9 @@ export default function AdminManageReports() {
               {/* Additional fields for "Resolved" status */}
               {selectedReport.status === "Resolved" && (
                 <div className="mt-4 p-3 bg-green-50 rounded-md">
-                  <strong className="text-green-800">Resolution Details:</strong>
+                  <strong className="text-green-800">
+                    Resolution Details:
+                  </strong>
                   <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
                     {selectedReport.resolutionDetails || "No details provided"}
                   </p>
@@ -490,9 +523,12 @@ export default function AdminManageReports() {
               {/* Additional fields for "Invalid" status */}
               {selectedReport.status === "Invalid" && (
                 <div className="mt-4 p-3 bg-red-50 rounded-md">
-                  <strong className="text-red-800">Reason for Invalidity:</strong>
+                  <strong className="text-red-800">
+                    Reason for Invalidity:
+                  </strong>
                   <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
-                    {selectedReport.invalidReason || "This report has been marked as invalid by the admin team."}
+                    {selectedReport.invalidReason ||
+                      "This report has been marked as invalid by the admin team."}
                   </p>
                   {selectedReport.invalidDate && (
                     <div className="mt-2">
@@ -592,8 +628,12 @@ export default function AdminManageReports() {
       {showInvalidModal && selectedReport && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg p-6 w-11/12 max-w-lg max-h-[80vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold">Reason to mark report as Invalid</h3>
-            <p className="text-sm text-gray-600 mt-1">Please enter a short reason explaining why this report is invalid.</p>
+            <h3 className="text-lg font-semibold">
+              Reason to mark report as Invalid
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Please enter a short reason explaining why this report is invalid.
+            </p>
 
             <textarea
               value={invalidReason}
