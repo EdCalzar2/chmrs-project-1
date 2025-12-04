@@ -7,6 +7,7 @@ import L from "leaflet";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
+import AdminSidebar from "@/components/AdminSidebar.jsx";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -203,48 +204,7 @@ export default function SuperAdmin() {
   return (
     <>
       {/* SIDEBAR */}
-      <div className="h-screen w-72 bg-[#01165A] text-white flex flex-col fixed left-0 top-0 text-center">
-        <h1 className="text-lg font-bold my-20">Welcome Super Admin!</h1>
-        <hr />
-
-        <nav className="flex flex-col">
-          <Link
-            to="/admin_manage_reports"
-            className="hover:bg-white hover:text-[#01165A] transition-all duration-200 text-sm py-7"
-          >
-            Manage Reports
-          </Link>
-          <hr />
-          <Link
-            to="/admin_report_analytics"
-            className="hover:bg-white hover:text-[#01165A] transition-all duration-200 text-sm py-7"
-          >
-            Report Analytics
-          </Link>
-          <hr />
-          <Link
-            to="/admin_pending_signup"
-            className="hover:bg-white hover:text-[#01165A] transition-all duration-200 text-sm py-7"
-          >
-            Admin Registrations
-          </Link>
-          <hr />
-          <Link
-            to="/admin_activity_log"
-            className="hover:bg-white hover:text-[#01165A] transition-all duration-200 text-sm py-7"
-          >
-            Activity Log
-          </Link>
-          <hr />
-          <Link
-            to="/"
-            className="hover:bg-white hover:text-[#01165A] transition-all duration-200 text-sm py-7"
-          >
-            Logout
-          </Link>
-          <hr />
-        </nav>
-      </div>
+      <AdminSidebar role="superadmin" />
 
       {/* CONTENT */}
       <div className="ml-82 mt-28 p-4">

@@ -1,5 +1,4 @@
 import { Link, useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
 import Logo from "../assets/logo.png";
 import { useState } from "react";
 
@@ -12,20 +11,64 @@ export default function Login() {
   const handleEmail = (e) => {
     setEmail(e.target.value);
   };
+  
   const handlePassword = (e) => {
     setPassword(e.target.value);
   };
+
   const handleLogin = (e) => {
     e.preventDefault();
+
+    // User login
     if (email === "user" && password === "123") {
       navigate("/home");
-    } else if (email === "superadmin" && password === "123") {
-      navigate("/super_admin_page");
-    } else if (email === "admin" && password == "123") {
-      navigate("/admin_manage_reports");
-    } else {
-      alert("Invalid email or password");
+      return;
     }
+
+    // Super Admin login
+    if (email === "superadmin" && password === "123456") {
+      localStorage.setItem("userRole", "superadmin");
+      navigate("/super_admin_page");
+      return;
+    }
+
+    // Check if this is an approved admin
+    const approvedAdmins = JSON.parse(
+      localStorage.getItem("approved_admins") || "[]"
+    );
+
+    const adminUser = approvedAdmins.find(
+      (admin) => admin.email === email && admin.password === password
+    );
+
+    if (adminUser) {
+      localStorage.setItem("userRole", "admin");
+      localStorage.setItem("currentAdminId", adminUser.id);
+      localStorage.setItem("currentAdminName", `${adminUser.firstName} ${adminUser.lastName}`);
+      navigate("/admin_manage_reports");
+      return;
+    }
+
+    // Check if user is in pending registrations
+    const pendingRegistrations = JSON.parse(
+      localStorage.getItem("pending_admin_registrations") || "[]"
+    );
+
+    const pendingUser = pendingRegistrations.find(
+      (reg) => reg.email === email && reg.password === password
+    );
+
+    if (pendingUser) {
+      if (pendingUser.status === "pending") {
+        alert("Your admin registration is pending approval. Please wait for super admin verification.");
+      } else if (pendingUser.status === "rejected") {
+        alert(`Your admin registration was rejected. Reason: ${pendingUser.rejectReason || "Not specified"}`);
+      }
+      return;
+    }
+
+    // Invalid credentials
+    alert("Invalid email or password");
   };
 
   const [showRoleSignupModal, setShowRoleSignupModal] = useState(false);
@@ -40,7 +83,7 @@ export default function Login() {
           LOGIN
         </h1>
 
-        <form>
+        <form onSubmit={handleLogin}>
           <div className="flex flex-col items-center space-y-4">
             <input
               type="text"
@@ -66,7 +109,7 @@ export default function Login() {
           </Link>
 
           <button
-            onClick={handleLogin}
+            type="submit"
             className="bg-[#00BC3A] text-white text-sm font-bold p-2 rounded-md w-full max-w-xs mx-auto hover:bg-[#00a732] transition cursor-pointer"
           >
             SIGN IN
@@ -107,6 +150,9 @@ export default function Login() {
                   Admin
                 </Link>
               </div>
+              <p className="text-xs text-gray-500 mt-4">
+                Note: Admin accounts require super admin approval
+              </p>
             </div>
           </div>
         )}

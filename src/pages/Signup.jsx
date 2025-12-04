@@ -5,7 +5,7 @@ export default function Signup() {
     <>
       <div className="bg-[#01165A] h-18 w-full" />
       <div className="bg-white p-6 px-12 md:w-2/7 md:mt-12 mx-auto rounded-lg shadow-md">
-        <h1 className="font-bold text-xl mt-4">RESIDENT- SIGN UP</h1>
+        <h1 className="font-bold text-xl mt-4">RESIDENT - SIGN UP</h1>
         <p>Create an account</p>
         <div className="flex flex-col gap-3 md:mt-5">
           <input
