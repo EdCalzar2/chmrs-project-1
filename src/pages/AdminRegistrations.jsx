@@ -15,7 +15,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-export default function SuperAdmin() {
+export default function AdminRegistrations() {
   const location = useLocation();
   const reportsFromState = location.state?.reports;
 

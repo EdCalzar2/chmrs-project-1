@@ -11,6 +11,7 @@ import AdminManageReports from "./pages/AdminManageReports.jsx";
 import ReportHazardDetails from "./pages/ReportHazardDetails.jsx";
 import AdminReportAnalytics from "./pages/AdminReportAnalytics.jsx";
 import SuperAdmin from "./pages/SuperAdmin.jsx";
+import AdminRegistrations from "./pages/AdminRegistrations.jsx";
 
 export default function App() {
   return (
@@ -29,6 +30,10 @@ export default function App() {
         ></Route>
         <Route path="/emergency" element={<Emergency />}></Route>
         <Route path="/super_admin_page" element={<SuperAdmin />}></Route>
+        <Route
+          path="/admin_pending_signup"
+          element={<AdminRegistrations />}
+        ></Route>
         <Route
           path="/admin_manage_reports"
           element={<AdminManageReports />}
