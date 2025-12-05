@@ -28,7 +28,6 @@ export default function App() {
           path="/report_hazard_details"
           element={<ReportHazardDetails />}
         ></Route>
-        <Route path="/emergency" element={<Emergency />}></Route>
         <Route path="/super_admin_page" element={<SuperAdmin />}></Route>
         <Route
           path="/admin_pending_signup"
