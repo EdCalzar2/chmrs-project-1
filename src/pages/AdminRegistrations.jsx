@@ -11,23 +11,23 @@ export default function AdminRegistrations() {
 
   useEffect(() => {
     loadRegistrations();
-    
+
     // Add event listener for storage changes
     const handleStorageChange = () => {
       loadRegistrations();
     };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
+
+    window.addEventListener("storage", handleStorageChange);
+
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
 
   const loadRegistrations = () => {
     const stored = localStorage.getItem("pending_admin_registrations");
     console.log("Loading registrations from localStorage:", stored);
-    
+
     if (stored) {
       const parsed = JSON.parse(stored);
       console.log("Parsed registrations:", parsed);
@@ -51,7 +51,7 @@ export default function AdminRegistrations() {
     const approvedAdmins = JSON.parse(
       localStorage.getItem("approved_admins") || "[]"
     );
-    
+
     approvedAdmins.push({
       id: registration.id,
       email: registration.email,
@@ -62,16 +62,16 @@ export default function AdminRegistrations() {
       photo: registration.photo,
       approvedDate: new Date().toISOString(),
     });
-    
+
     localStorage.setItem("approved_admins", JSON.stringify(approvedAdmins));
 
     // Update registration status
-    const updated = registrations.map(reg =>
+    const updated = registrations.map((reg) =>
       reg.id === registration.id
         ? { ...reg, status: "approved", approvedDate: new Date().toISOString() }
         : reg
     );
-    
+
     saveRegistrations(updated);
     setShowModal(false);
     setSelectedRegistration(null);
@@ -84,7 +84,7 @@ export default function AdminRegistrations() {
       return;
     }
 
-    const updated = registrations.map(reg =>
+    const updated = registrations.map((reg) =>
       reg.id === selectedRegistration.id
         ? {
             ...reg,
@@ -94,13 +94,41 @@ export default function AdminRegistrations() {
           }
         : reg
     );
-    
+
     saveRegistrations(updated);
     setShowRejectModal(false);
     setShowModal(false);
     setSelectedRegistration(null);
     setRejectReason("");
     alert("Admin registration rejected.");
+  };
+
+  // Remove admin feature
+  const handleRemoveAdmin = (registration) => {
+    if (
+      !window.confirm("Are you sure you want to delete this admin permanently?")
+    )
+      return;
+
+    // Remove from approved_admins
+    const approvedAdmins = JSON.parse(
+      localStorage.getItem("approved_admins") || "[]"
+    );
+    const updatedApproved = approvedAdmins.filter(
+      (a) => a.id !== registration.id
+    );
+    localStorage.setItem("approved_admins", JSON.stringify(updatedApproved));
+
+    // Completely remove registration from pending list
+    const updatedRegistrations = registrations.filter(
+      (reg) => reg.id !== registration.id
+    );
+
+    saveRegistrations(updatedRegistrations);
+    setShowModal(false);
+    setSelectedRegistration(null);
+
+    alert("Admin has been permanently removed.");
   };
 
   const openModal = (registration) => {
@@ -115,7 +143,7 @@ export default function AdminRegistrations() {
     setShowRejectModal(false);
   };
 
-  const filteredRegistrations = registrations.filter(reg => {
+  const filteredRegistrations = registrations.filter((reg) => {
     if (filter === "all") return true;
     return reg.status === filter;
   });
@@ -186,8 +214,18 @@ export default function AdminRegistrations() {
               onClick={loadRegistrations}
               className="px-4 py-2 bg-[#01165A] text-white rounded-md hover:bg-[#012050] transition flex items-center gap-2"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
               </svg>
               Refresh
             </button>
@@ -203,7 +241,8 @@ export default function AdminRegistrations() {
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
             >
-              Pending ({registrations.filter(r => r.status === "pending").length})
+              Pending (
+              {registrations.filter((r) => r.status === "pending").length})
             </button>
             <button
               onClick={() => setFilter("approved")}
@@ -213,7 +252,8 @@ export default function AdminRegistrations() {
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
             >
-              Approved ({registrations.filter(r => r.status === "approved").length})
+              Approved (
+              {registrations.filter((r) => r.status === "approved").length})
             </button>
             <button
               onClick={() => setFilter("rejected")}
@@ -223,7 +263,8 @@ export default function AdminRegistrations() {
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
             >
-              Rejected ({registrations.filter(r => r.status === "rejected").length})
+              Rejected (
+              {registrations.filter((r) => r.status === "rejected").length})
             </button>
             <button
               onClick={() => setFilter("all")}
@@ -240,7 +281,9 @@ export default function AdminRegistrations() {
           {/* Registrations List */}
           {filteredRegistrations.length === 0 ? (
             <div className="text-center py-12 bg-gray-50 rounded-lg">
-              <p className="text-gray-500">No {filter !== "all" ? filter : ""} registrations found.</p>
+              <p className="text-gray-500">
+                No {filter !== "all" ? filter : ""} registrations found.
+              </p>
             </div>
           ) : (
             <div className="grid gap-4">
@@ -257,21 +300,28 @@ export default function AdminRegistrations() {
                         alt={`${reg.firstName} ${reg.lastName}`}
                         className="w-20 h-20 object-cover rounded-md border-2 border-gray-300"
                       />
-                      
+
                       {/* Info */}
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="text-lg font-semibold">
                             {reg.firstName} {reg.lastName}
                           </h3>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(reg.status)}`}>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(
+                              reg.status
+                            )}`}
+                          >
                             {reg.status.toUpperCase()}
                           </span>
                         </div>
                         <p className="text-sm text-gray-600">{reg.email}</p>
-                        <p className="text-sm text-gray-600">{reg.contactNumber}</p>
+                        <p className="text-sm text-gray-600">
+                          {reg.contactNumber}
+                        </p>
                         <p className="text-xs text-gray-400 mt-1">
-                          Submitted: {new Date(reg.submittedDate).toLocaleString()}
+                          Submitted:{" "}
+                          {new Date(reg.submittedDate).toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -313,50 +363,85 @@ export default function AdminRegistrations() {
               {/* Details */}
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Status</label>
-                  <span className={`inline-block mt-1 px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(selectedRegistration.status)}`}>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Status
+                  </label>
+                  <span
+                    className={`inline-block mt-1 px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(
+                      selectedRegistration.status
+                    )}`}
+                  >
                     {selectedRegistration.status.toUpperCase()}
                   </span>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Full Name</label>
-                  <p className="mt-1">{selectedRegistration.firstName} {selectedRegistration.lastName}</p>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Full Name
+                  </label>
+                  <p className="mt-1">
+                    {selectedRegistration.firstName}{" "}
+                    {selectedRegistration.lastName}
+                  </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Email
+                  </label>
                   <p className="mt-1">{selectedRegistration.email}</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Contact Number</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Contact Number
+                  </label>
                   <p className="mt-1">{selectedRegistration.contactNumber}</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Submitted Date</label>
-                  <p className="mt-1">{new Date(selectedRegistration.submittedDate).toLocaleString()}</p>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Submitted Date
+                  </label>
+                  <p className="mt-1">
+                    {new Date(
+                      selectedRegistration.submittedDate
+                    ).toLocaleString()}
+                  </p>
                 </div>
 
                 {selectedRegistration.approvedDate && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Approved Date</label>
-                    <p className="mt-1">{new Date(selectedRegistration.approvedDate).toLocaleString()}</p>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Approved Date
+                    </label>
+                    <p className="mt-1">
+                      {new Date(
+                        selectedRegistration.approvedDate
+                      ).toLocaleString()}
+                    </p>
                   </div>
                 )}
 
-                {selectedRegistration.status === "rejected" && selectedRegistration.rejectReason && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Rejection Reason</label>
-                    <p className="mt-1 text-red-600">{selectedRegistration.rejectReason}</p>
-                    {selectedRegistration.rejectedDate && (
-                      <p className="text-xs text-gray-400 mt-1">
-                        Rejected: {new Date(selectedRegistration.rejectedDate).toLocaleString()}
+                {selectedRegistration.status === "rejected" &&
+                  selectedRegistration.rejectReason && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Rejection Reason
+                      </label>
+                      <p className="mt-1 text-red-600">
+                        {selectedRegistration.rejectReason}
                       </p>
-                    )}
-                  </div>
-                )}
+                      {selectedRegistration.rejectedDate && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          Rejected:{" "}
+                          {new Date(
+                            selectedRegistration.rejectedDate
+                          ).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  )}
               </div>
             </div>
 
@@ -378,6 +463,26 @@ export default function AdminRegistrations() {
                   </button>
                 </>
               )}
+
+              {/* Remove Admin Logic */}
+              {selectedRegistration.status === "approved" && (
+                <button
+                  onClick={() => handleRemoveAdmin(selectedRegistration)}
+                  className="px-4 py-2 bg-red-700 text-white rounded-md hover:bg-red-800 transition"
+                >
+                  Remove Admin
+                </button>
+              )}
+
+              {selectedRegistration.status === "rejected" && (
+                <button
+                  onClick={() => handleRemoveAdmin(selectedRegistration)}
+                  className="px-4 py-2 bg-red-700 text-white rounded-md hover:bg-red-800 transition"
+                >
+                  Remove Admin
+                </button>
+              )}
+
               <button
                 onClick={closeModal}
                 className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition"
