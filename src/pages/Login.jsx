@@ -19,12 +19,6 @@ export default function Login() {
   const handleLogin = (e) => {
     e.preventDefault();
 
-    // User login
-    if (email === "user" && password === "123") {
-      navigate("/home");
-      return;
-    }
-
     // Super Admin login
     if (email === "superadmin" && password === "123456") {
       localStorage.setItem("userRole", "superadmin");
@@ -76,8 +70,31 @@ export default function Login() {
       return;
     }
 
+    // Check if this is a registered resident
+    const registeredResidents = JSON.parse(
+      localStorage.getItem("registered_residents") || "[]"
+    );
+
+    const residentUser = registeredResidents.find(
+      (resident) => resident.email === email && resident.password === password
+    );
+
+    if (residentUser) {
+      localStorage.setItem("userRole", "resident");
+      localStorage.setItem("currentUserId", residentUser.id);
+      localStorage.setItem(
+        "currentUserName",
+        `${residentUser.firstName} ${residentUser.lastName}`
+      );
+      localStorage.setItem("currentUserEmail", residentUser.email);
+      navigate("/home");
+      return;
+    }
+
     // Invalid credentials
-    alert("Invalid email or password");
+    alert(
+      "Invalid email or password. Please check your credentials or sign up for an account."
+    );
   };
 
   const [showRoleSignupModal, setShowRoleSignupModal] = useState(false);

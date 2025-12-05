@@ -14,19 +14,38 @@ export default function ViewReports() {
   // Load reports from persisted storage (no sample fallback)
   const [reports] = useState(() => {
     try {
+      const currentUserId = localStorage.getItem("currentUserId");
+
+      if (!currentUserId) {
+        return []; // No user logged in, show no reports
+      }
+
       const raw = localStorage.getItem("chmrs_reports");
       const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
+
+      // Filter to show only current user's reports
+      const userReports = Array.isArray(parsed)
+        ? parsed.filter((report) => report.userId === currentUserId)
+        : [];
+
+      return userReports;
     } catch {
       return [];
     }
   });
 
-  const filters = ["All", "Submitted", "Under Review", "In Progress", "Resolved", "Invalid"];
+  const filters = [
+    "All",
+    "Submitted",
+    "Under Review",
+    "In Progress",
+    "Resolved",
+    "Invalid",
+  ];
 
   // Filter logic (works with persisted reports that use `status` field)
   const filteredReports =
-    activeFilter === "All" 
+    activeFilter === "All"
       ? reports
       : reports.filter((r) => r.status === activeFilter);
 
@@ -46,9 +65,9 @@ export default function ViewReports() {
 
   delete L.Icon.Default.prototype._getIconUrl;
   L.Icon.Default.mergeOptions({
-      iconUrl: markerIcon,
-      iconRetinaUrl: markerIcon2x,
-      shadowUrl: markerShadow,
+    iconUrl: markerIcon,
+    iconRetinaUrl: markerIcon2x,
+    shadowUrl: markerShadow,
   });
 
   return (
@@ -77,22 +96,24 @@ export default function ViewReports() {
               key={report.id}
               className="bg-white rounded-2xl p-6 shadow-[0px_5px_5px_rgba(0,0,0,0.25)] hover:shadow-[0px_10px_15px_rgba(0,0,0,0.25)] transition"
             >
-            <div className="flex items-baseline gap-x-5">
-              <h2 className="text-md font-semibold mb-1 uppercase">{report.hazard}</h2>
-              <p
-                className={`text-sm font-semibold mb-2 ${
-                  report.severity === "Critical"
-                    ? "text-black px-3 py-1 rounded-full bg-[#FF4242]"
-                    : report.severity === "Moderate"
-                    ? "text-black px-3 py-1 rounded-full bg-[#FFA600]"
-                    : report.severity === "Minor"
-                    ? "text-black px-3 py-1 rounded-full bg-[#15FF00]"
-                    : ""
-                }`}
-              >
-                {report.severity}
-              </p>
-            </div>
+              <div className="flex items-baseline gap-x-5">
+                <h2 className="text-md font-semibold mb-1 uppercase">
+                  {report.hazard}
+                </h2>
+                <p
+                  className={`text-sm font-semibold mb-2 ${
+                    report.severity === "Critical"
+                      ? "text-black px-3 py-1 rounded-full bg-[#FF4242]"
+                      : report.severity === "Moderate"
+                      ? "text-black px-3 py-1 rounded-full bg-[#FFA600]"
+                      : report.severity === "Minor"
+                      ? "text-black px-3 py-1 rounded-full bg-[#15FF00]"
+                      : ""
+                  }`}
+                >
+                  {report.severity}
+                </p>
+              </div>
               <p className="text-sm text-black mb-4">
                 <span className="font-semibold">Status:</span> {report.status}
               </p>
@@ -101,7 +122,13 @@ export default function ViewReports() {
                   ? report.description.substring(0, 60) + "..."
                   : report.description}
               </p>
-              <p className="text-gray-500 mt-4 text-sm">Date Submitted: {report.dateSubmitted || (report.date ? new Date(report.date).toLocaleString() : 'N/A')}</p>
+              <p className="text-gray-500 mt-4 text-sm">
+                Date Submitted:{" "}
+                {report.dateSubmitted ||
+                  (report.date
+                    ? new Date(report.date).toLocaleString()
+                    : "N/A")}
+              </p>
               <div className="flex gap-2 items-center mt-2">
                 <button
                   onClick={() => openModal(report, index)}
@@ -161,36 +188,51 @@ export default function ViewReports() {
                 </div>
               </div>
 
-              <p className="text-sm text-gray-600 my-3">{selectedReport.description}</p>
+              <p className="text-sm text-gray-600 my-3">
+                {selectedReport.description}
+              </p>
 
               {/* Map Display */}
-              {selectedReport.location && selectedReport.location.lat && selectedReport.location.lng && (
-                <div className="my-4">
-                  <strong>Location:</strong>
-                  <div className="mt-2 h-[300px] border-2 border-gray-300 rounded-lg overflow-hidden">
-                    <MapContainer
-                      center={[selectedReport.location.lat, selectedReport.location.lng]}
-                      zoom={17}
-                      style={{ height: "100%", width: "100%" }}
-                      scrollWheelZoom={false}
-                    >
-                      <TileLayer
-                        url={osm.maptiler.url}
-                        attribution={osm.maptiler.attribution}
-                      />
-                      <Marker position={[selectedReport.location.lat, selectedReport.location.lng]} />
-                    </MapContainer>
+              {selectedReport.location &&
+                selectedReport.location.lat &&
+                selectedReport.location.lng && (
+                  <div className="my-4">
+                    <strong>Location:</strong>
+                    <div className="mt-2 h-[300px] border-2 border-gray-300 rounded-lg overflow-hidden">
+                      <MapContainer
+                        center={[
+                          selectedReport.location.lat,
+                          selectedReport.location.lng,
+                        ]}
+                        zoom={17}
+                        style={{ height: "100%", width: "100%" }}
+                        scrollWheelZoom={false}
+                      >
+                        <TileLayer
+                          url={osm.maptiler.url}
+                          attribution={osm.maptiler.attribution}
+                        />
+                        <Marker
+                          position={[
+                            selectedReport.location.lat,
+                            selectedReport.location.lng,
+                          ]}
+                        />
+                      </MapContainer>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Coordinates: {selectedReport.location.lat.toFixed(6)},{" "}
+                      {selectedReport.location.lng.toFixed(6)}
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Coordinates: {selectedReport.location.lat.toFixed(6)}, {selectedReport.location.lng.toFixed(6)}
-                  </p>
-                </div>
-              )}
+                )}
 
               {!selectedReport.location && (
                 <div className="my-2">
                   <strong>Location:</strong>
-                  <div className="text-sm text-gray-500 mt-1">No location selected</div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    No location selected
+                  </div>
                 </div>
               )}
 
@@ -205,7 +247,9 @@ export default function ViewReports() {
                     ))}
                   </ul>
                 ) : (
-                  <div className="text-sm text-gray-500 mt-1">No photos attached</div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    No photos attached
+                  </div>
                 )}
               </div>
 
@@ -219,19 +263,24 @@ export default function ViewReports() {
               </div>
 
               {/* Show assigned worker and in progress date for In Progress and Resolved statuses */}
-              {(selectedReport.status === "In Progress" || selectedReport.status === "Resolved") && (
+              {(selectedReport.status === "In Progress" ||
+                selectedReport.status === "Resolved") && (
                 <>
                   {selectedReport.assignedTo && (
                     <div className="mt-2">
                       <strong>Assigned To:</strong>
-                      <div className="text-sm text-gray-700">{selectedReport.assignedTo}</div>
+                      <div className="text-sm text-gray-700">
+                        {selectedReport.assignedTo}
+                      </div>
                     </div>
                   )}
                   {selectedReport.inProgressDate && (
                     <div className="mt-2">
                       <strong>Marked In Progress:</strong>
                       <div className="text-sm text-gray-700">
-                        {new Date(selectedReport.inProgressDate).toLocaleString()}
+                        {new Date(
+                          selectedReport.inProgressDate
+                        ).toLocaleString()}
                       </div>
                     </div>
                   )}
@@ -243,7 +292,9 @@ export default function ViewReports() {
                 <div className="mt-4 p-3 bg-orange-50 rounded-md">
                   <div>
                     <strong className="text-orange-800">Assign To:</strong>
-                    <div className="text-sm text-gray-700 mt-1">{selectedReport.assignedTo || "Pending..."}</div>
+                    <div className="text-sm text-gray-700 mt-1">
+                      {selectedReport.assignedTo || "Pending..."}
+                    </div>
                   </div>
                 </div>
               )}
@@ -251,7 +302,9 @@ export default function ViewReports() {
               {/* Additional fields for "Resolved" status */}
               {selectedReport.status === "Resolved" && (
                 <div className="mt-4 p-3 bg-green-50 rounded-md">
-                  <strong className="text-green-800">Resolution Details:</strong>
+                  <strong className="text-green-800">
+                    Resolution Details:
+                  </strong>
                   <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
                     {selectedReport.resolutionDetails || "No details provided"}
                   </p>
@@ -269,9 +322,12 @@ export default function ViewReports() {
               {/* Additional fields for "Invalid" status */}
               {selectedReport.status === "Invalid" && (
                 <div className="mt-4 p-3 bg-red-50 rounded-md">
-                  <strong className="text-red-800">Reason for Invalidity:</strong>
+                  <strong className="text-red-800">
+                    Reason for Invalidity:
+                  </strong>
                   <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
-                    {selectedReport.invalidReason || "This report has been marked as invalid by the admin team."}
+                    {selectedReport.invalidReason ||
+                      "This report has been marked as invalid by the admin team."}
                   </p>
                   {selectedReport.invalidDate && (
                     <div className="mt-2">
@@ -295,12 +351,7 @@ export default function ViewReports() {
             </div>
           </div>
         </div>
-
-        
       )}
-
-      
     </>
   );
 }
-      
