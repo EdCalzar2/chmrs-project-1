@@ -11,7 +11,7 @@ export default function Login() {
   const handleEmail = (e) => {
     setEmail(e.target.value);
   };
-  
+
   const handlePassword = (e) => {
     setPassword(e.target.value);
   };
@@ -44,7 +44,10 @@ export default function Login() {
     if (adminUser) {
       localStorage.setItem("userRole", "admin");
       localStorage.setItem("currentAdminId", adminUser.id);
-      localStorage.setItem("currentAdminName", `${adminUser.firstName} ${adminUser.lastName}`);
+      localStorage.setItem(
+        "currentAdminName",
+        `${adminUser.firstName} ${adminUser.lastName}`
+      );
       navigate("/admin_manage_reports");
       return;
     }
@@ -60,9 +63,15 @@ export default function Login() {
 
     if (pendingUser) {
       if (pendingUser.status === "pending") {
-        alert("Your admin registration is pending approval. Please wait for super admin verification.");
+        alert(
+          "Your admin registration is pending approval. Please wait for super admin verification."
+        );
       } else if (pendingUser.status === "rejected") {
-        alert(`Your admin registration was rejected. Reason: ${pendingUser.rejectReason || "Not specified"}`);
+        alert(
+          `Your admin registration was rejected. Reason: ${
+            pendingUser.rejectReason || "Not specified"
+          }`
+        );
       }
       return;
     }
