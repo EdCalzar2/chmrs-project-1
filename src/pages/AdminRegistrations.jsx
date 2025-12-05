@@ -1,203 +1,160 @@
-import React, { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { MapContainer, TileLayer, Marker } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import osm from "../utils/osm-providers.js";
-import L from "leaflet";
-import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
-import markerIcon from "leaflet/dist/images/marker-icon.png";
-import markerShadow from "leaflet/dist/images/marker-shadow.png";
-
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
-});
+import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 export default function AdminRegistrations() {
-  const location = useLocation();
-  const reportsFromState = location.state?.reports;
-
+  const [registrations, setRegistrations] = useState([]);
+  const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [selectedReport, setSelectedReport] = useState(null);
-  const [selectedIndex, setSelectedIndex] = useState(null);
-  const [assignedTo, setAssignedTo] = useState("");
-  const [resolutionDetails, setResolutionDetails] = useState("");
-  const [showInvalidModal, setShowInvalidModal] = useState(false);
-  const [invalidReason, setInvalidReason] = useState("");
-
-  const [reports, setReports] = useState(() => {
-    try {
-      const raw = localStorage.getItem("chmrs_reports");
-      const persisted = raw ? JSON.parse(raw) : [];
-      return reportsFromState && reportsFromState.length > 0
-        ? reportsFromState
-        : persisted;
-    } catch (e) {
-      console.error("Failed to load persisted reports", e);
-      return reportsFromState || [];
-    }
-  });
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [filter, setFilter] = useState("pending"); // pending, approved, rejected, all
 
   useEffect(() => {
-    try {
-      localStorage.setItem("chmrs_reports", JSON.stringify(reports));
-    } catch (e) {
-      console.error("Failed to save reports to localStorage", e);
-    }
-  }, [reports]);
+    loadRegistrations();
 
-  const handleDelete = (index) => {
-    if (!window.confirm("Are you sure you want to delete this report?")) return;
-    setReports((prev) => prev.filter((_, i) => i !== index));
-  };
+    // Add event listener for storage changes
+    const handleStorageChange = () => {
+      loadRegistrations();
+    };
 
-  const handleAccept = () => {
-    if (selectedIndex !== null) {
-      setReports((prev) =>
-        prev.map((report, i) =>
-          i === selectedIndex ? { ...report, status: "Under Review" } : report
-        )
-      );
-      setShowModal(false);
-      setSelectedReport(null);
-      setSelectedIndex(null);
-    }
-  };
+    window.addEventListener("storage", handleStorageChange);
 
-  const handleMarkInProgress = () => {
-    if (selectedIndex !== null) {
-      if (!assignedTo.trim()) {
-        alert(
-          "Please assign a worker or department before marking as In Progress."
-        );
-        return;
-      }
-      setReports((prev) =>
-        prev.map((report, i) =>
-          i === selectedIndex
-            ? {
-                ...report,
-                status: "In Progress",
-                assignedTo: assignedTo.trim(),
-                inProgressDate: new Date().toISOString(),
-              }
-            : report
-        )
-      );
-      setShowModal(false);
-      setSelectedReport(null);
-      setSelectedIndex(null);
-      setAssignedTo("");
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
+  const loadRegistrations = () => {
+    const stored = localStorage.getItem("pending_admin_registrations");
+    console.log("Loading registrations from localStorage:", stored);
+
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      console.log("Parsed registrations:", parsed);
+      setRegistrations(parsed);
+    } else {
+      console.log("No registrations found in localStorage");
+      setRegistrations([]);
     }
   };
 
-  const handleMarkResolved = () => {
-    if (selectedIndex !== null) {
-      if (!resolutionDetails.trim()) {
-        alert("Please provide resolution details before marking as Resolved.");
-        return;
-      }
-      setReports((prev) =>
-        prev.map((report, i) =>
-          i === selectedIndex
-            ? {
-                ...report,
-                status: "Resolved",
-                resolutionDetails: resolutionDetails.trim(),
-                resolvedDate: new Date().toISOString(),
-              }
-            : report
-        )
-      );
-      setShowModal(false);
-      setSelectedReport(null);
-      setSelectedIndex(null);
-      setResolutionDetails("");
-    }
+  const saveRegistrations = (updatedRegistrations) => {
+    localStorage.setItem(
+      "pending_admin_registrations",
+      JSON.stringify(updatedRegistrations)
+    );
+    setRegistrations(updatedRegistrations);
   };
 
-  // open the invalid-reason input modal
-  const handleMarkInvalid = () => {
-    // show the input modal so admin can enter a reason
-    setInvalidReason(selectedReport?.invalidReason || "");
-    setShowInvalidModal(true);
+  const handleApprove = (registration) => {
+    // Add to approved admins list
+    const approvedAdmins = JSON.parse(
+      localStorage.getItem("approved_admins") || "[]"
+    );
+
+    approvedAdmins.push({
+      id: registration.id,
+      email: registration.email,
+      password: registration.password,
+      firstName: registration.firstName,
+      lastName: registration.lastName,
+      contactNumber: registration.contactNumber,
+      photo: registration.photo,
+      approvedDate: new Date().toISOString(),
+    });
+
+    localStorage.setItem("approved_admins", JSON.stringify(approvedAdmins));
+
+    // Update registration status
+    const updated = registrations.map((reg) =>
+      reg.id === registration.id
+        ? { ...reg, status: "approved", approvedDate: new Date().toISOString() }
+        : reg
+    );
+
+    saveRegistrations(updated);
+    setShowModal(false);
+    setSelectedRegistration(null);
+    alert("Admin registration approved successfully!");
   };
 
-  // actually mark the selected report as invalid and persist reason/date
-  const confirmMarkInvalid = () => {
-    if (selectedIndex === null) return;
-    if (!invalidReason.trim()) {
-      alert("Please provide a reason for marking this report as invalid.");
+  const handleReject = () => {
+    if (!rejectReason.trim()) {
+      alert("Please provide a reason for rejection");
       return;
     }
 
-    setReports((prev) =>
-      prev.map((report, i) =>
-        i === selectedIndex
-          ? {
-              ...report,
-              status: "Invalid",
-              invalidReason: invalidReason.trim(),
-              invalidDate: new Date().toISOString(),
-            }
-          : report
-      )
+    const updated = registrations.map((reg) =>
+      reg.id === selectedRegistration.id
+        ? {
+            ...reg,
+            status: "rejected",
+            rejectedDate: new Date().toISOString(),
+            rejectReason: rejectReason.trim(),
+          }
+        : reg
     );
 
-    // close both modals and reset selection
-    setShowInvalidModal(false);
+    saveRegistrations(updated);
+    setShowRejectModal(false);
     setShowModal(false);
-    setSelectedReport(null);
-    setSelectedIndex(null);
-    setInvalidReason("");
+    setSelectedRegistration(null);
+    setRejectReason("");
+    alert("Admin registration rejected.");
   };
 
-  const cancelMarkInvalid = () => {
-    setShowInvalidModal(false);
-    setInvalidReason("");
+  // Remove admin feature
+  const handleRemoveAdmin = (registration) => {
+    if (
+      !window.confirm("Are you sure you want to delete this admin permanently?")
+    )
+      return;
+
+    // Remove from approved_admins
+    const approvedAdmins = JSON.parse(
+      localStorage.getItem("approved_admins") || "[]"
+    );
+    const updatedApproved = approvedAdmins.filter(
+      (a) => a.id !== registration.id
+    );
+    localStorage.setItem("approved_admins", JSON.stringify(updatedApproved));
+
+    // Completely remove registration from pending list
+    const updatedRegistrations = registrations.filter(
+      (reg) => reg.id !== registration.id
+    );
+
+    saveRegistrations(updatedRegistrations);
+    setShowModal(false);
+    setSelectedRegistration(null);
+
+    alert("Admin has been permanently removed.");
   };
 
-  const handleReopen = () => {
-    if (selectedIndex !== null) {
-      setReports((prev) =>
-        prev.map((report, i) =>
-          i === selectedIndex
-            ? {
-                ...report,
-                status: "Under Review",
-                // clear invalid markers when reopening
-                invalidReason: undefined,
-                invalidDate: undefined,
-              }
-            : report
-        )
-      );
-      setShowModal(false);
-      setSelectedReport(null);
-      setSelectedIndex(null);
-    }
-  };
-
-  const openModal = (report, index) => {
-    setSelectedReport(report);
-    setSelectedIndex(index);
+  const openModal = (registration) => {
+    setSelectedRegistration(registration);
     setShowModal(true);
-    if (report.assignedTo) setAssignedTo(report.assignedTo);
-    if (report.resolutionDetails)
-      setResolutionDetails(report.resolutionDetails);
-    if (report.invalidReason) setInvalidReason(report.invalidReason);
   };
 
   const closeModal = () => {
     setShowModal(false);
-    setSelectedReport(null);
-    setSelectedIndex(null);
-    setAssignedTo("");
-    setResolutionDetails("");
-    setInvalidReason("");
-    setShowInvalidModal(false);
+    setSelectedRegistration(null);
+    setRejectReason("");
+    setShowRejectModal(false);
+  };
+
+  const filteredRegistrations = registrations.filter((reg) => {
+    if (filter === "all") return true;
+    return reg.status === filter;
+  });
+
+  const getStatusBadge = (status) => {
+    const styles = {
+      pending: "bg-yellow-100 text-yellow-800",
+      approved: "bg-green-100 text-green-800",
+      rejected: "bg-red-100 text-red-800",
+    };
+    return styles[status] || styles.pending;
   };
 
   return (
@@ -209,7 +166,7 @@ export default function AdminRegistrations() {
 
         <nav className="flex flex-col">
           <Link
-            to="/admin_manage_reports"
+            to="/super_admin_page"
             className="hover:bg-white hover:text-[#01165A] transition-all duration-200 text-sm py-7"
           >
             Manage Reports
@@ -247,382 +204,288 @@ export default function AdminRegistrations() {
       </div>
 
       {/* CONTENT */}
-      <div className="ml-82 mt-28 p-4">
-        <div className="grid grid-cols-1 gap-y-6">
-          {reports.length === 0 && (
-            <p className="text-gray-500 text-center mt-10">
-              No reports submitted yet.
-            </p>
-          )}
-
-          {reports.map((report, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-2xl p-6 shadow-[0px_5px_5px_rgba(0,0,0,0.25)] hover:shadow-[0px_10px_15px_rgba(0,0,0,0.25)] transition ml-16 w-250"
+      <div className="ml-72 p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold text-[#01165A]">
+              Admin Registration Requests
+            </h1>
+            <button
+              onClick={loadRegistrations}
+              className="px-4 py-2 bg-[#01165A] text-white rounded-md hover:bg-[#012050] transition flex items-center gap-2"
             >
-              <div className="flex items-baseline gap-x-3">
-                <h1 className="font-bold uppercase">{report.hazard}</h1>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Refresh
+            </button>
+          </div>
 
-                <h1
-                  className={
-                    `px-3 rounded-full text-white ` +
-                    (report.severity === "Minor"
-                      ? "bg-yellow-500 border-yellow-600"
-                      : report.severity === "Moderate"
-                      ? "bg-orange-500 border-orange-600"
-                      : "bg-red-500 border-red-600")
-                  }
-                >
-                  {report.severity}
-                </h1>
+          {/* Filter Tabs */}
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setFilter("pending")}
+              className={`px-4 py-2 rounded-md font-medium transition ${
+                filter === "pending"
+                  ? "bg-[#01165A] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              Pending (
+              {registrations.filter((r) => r.status === "pending").length})
+            </button>
+            <button
+              onClick={() => setFilter("approved")}
+              className={`px-4 py-2 rounded-md font-medium transition ${
+                filter === "approved"
+                  ? "bg-[#01165A] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              Approved (
+              {registrations.filter((r) => r.status === "approved").length})
+            </button>
+            <button
+              onClick={() => setFilter("rejected")}
+              className={`px-4 py-2 rounded-md font-medium transition ${
+                filter === "rejected"
+                  ? "bg-[#01165A] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              Rejected (
+              {registrations.filter((r) => r.status === "rejected").length})
+            </button>
+            <button
+              onClick={() => setFilter("all")}
+              className={`px-4 py-2 rounded-md font-medium transition ${
+                filter === "all"
+                  ? "bg-[#01165A] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              All ({registrations.length})
+            </button>
+          </div>
 
-                <h1 className="text-black/50">Report ID: {index + 1}</h1>
-              </div>
-
-              {report.status && (
-                <div className="flex items-center mt-2 mb-4">
-                  <span className="text-black mr-1 font-bold">Status:</span>
-                  <span
-                    className={`px-2 rounded-full font-medium ${
-                      report.status === "Submitted"
-                        ? "text-blue-700 bg-blue-100"
-                        : report.status === "Under Review"
-                        ? "text-orange-700 bg-orange-100"
-                        : report.status === "In Progress"
-                        ? "text-purple-700 bg-purple-100"
-                        : report.status === "Resolved"
-                        ? "text-green-700 bg-green-100"
-                        : report.status === "Invalid"
-                        ? "text-red-700 bg-red-100"
-                        : "text-gray-600 bg-gray-100"
-                    }`}
-                  >
-                    {report.status}
-                  </span>
-                </div>
-              )}
-
-              <p className="text-black/60 mb-4">
-                {report.description && report.description.length > 100
-                  ? report.description.substring(0, 60) + "..."
-                  : report.description}
+          {/* Registrations List */}
+          {filteredRegistrations.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 rounded-lg">
+              <p className="text-gray-500">
+                No {filter !== "all" ? filter : ""} registrations found.
               </p>
-              <h1 className="text-sm text-black/50">
-                Date:{" "}
-                {report.date
-                  ? new Date(report.date).toLocaleString()
-                  : new Date().toLocaleDateString()}
-              </h1>
-
-              <div className="flex gap-2 items-center mt-2">
-                <button
-                  onClick={() => openModal(report, index)}
-                  className="text-sm text-blue-700 rounded-md cursor-pointer hover:underline"
-                >
-                  See more
-                </button>
-
-                <button
-                  onClick={() => handleDelete(index)}
-                  className="text-sm text-red-600 hover:text-red-800 bg-red-50 px-3 py-1 rounded-md"
-                >
-                  Delete
-                </button>
-              </div>
             </div>
-          ))}
+          ) : (
+            <div className="grid gap-4">
+              {filteredRegistrations.map((reg) => (
+                <div
+                  key={reg.id}
+                  className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4 flex-1">
+                      {/* Photo Thumbnail */}
+                      <img
+                        src={reg.photo}
+                        alt={`${reg.firstName} ${reg.lastName}`}
+                        className="w-20 h-20 object-cover rounded-md border-2 border-gray-300"
+                      />
+
+                      {/* Info */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-lg font-semibold">
+                            {reg.firstName} {reg.lastName}
+                          </h3>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(
+                              reg.status
+                            )}`}
+                          >
+                            {reg.status.toUpperCase()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">{reg.email}</p>
+                        <p className="text-sm text-gray-600">
+                          {reg.contactNumber}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Submitted:{" "}
+                          {new Date(reg.submittedDate).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <button
+                      onClick={() => openModal(reg)}
+                      className="px-4 py-2 bg-[#01165A] text-white rounded-md hover:bg-[#012050] transition text-sm"
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* MODALS - Different content based on status */}
-      {showModal && selectedReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg p-6 w-11/12 max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-baseline gap-x-3">
-              <h3 className="text-lg font-semibold">{selectedReport.hazard}</h3>
-              <h1
-                className={
-                  `px-3 rounded-full text-white text-sm ` +
-                  (selectedReport.severity === "Minor"
-                    ? "bg-yellow-500 border-yellow-600"
-                    : selectedReport.severity === "Moderate"
-                    ? "bg-orange-500 border-orange-600"
-                    : "bg-red-500 border-red-600")
-                }
-              >
-                {selectedReport.severity}
-              </h1>
-            </div>
+      {/* Details Modal */}
+      {showModal && selectedRegistration && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">Registration Details</h2>
 
-            <div className="mt-1">
-              <div className="flex items-baseline">
-                <strong>Status:</strong>
-                <div
-                  className={`ml-1 text-sm px-2 rounded-full ${
-                    selectedReport.status === "Submitted"
-                      ? "text-blue-700 bg-blue-100"
-                      : selectedReport.status === "Under Review"
-                      ? "text-orange-700 bg-orange-100"
-                      : selectedReport.status === "In Progress"
-                      ? "text-purple-700 bg-purple-100"
-                      : selectedReport.status === "Resolved"
-                      ? "text-green-700 bg-green-100"
-                      : selectedReport.status === "Invalid"
-                      ? "text-red-700 bg-red-100"
-                      : "text-gray-700"
-                  }`}
-                >
-                  {selectedReport.status || "N/A"}
-                </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Photo */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  ID Photo
+                </label>
+                <img
+                  src={selectedRegistration.photo}
+                  alt="ID"
+                  className="w-full h-64 object-cover rounded-md border-2 border-gray-300"
+                />
               </div>
 
-              <p className="text-sm text-gray-600 my-3">
-                {selectedReport.description}
-              </p>
+              {/* Details */}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Status
+                  </label>
+                  <span
+                    className={`inline-block mt-1 px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(
+                      selectedRegistration.status
+                    )}`}
+                  >
+                    {selectedRegistration.status.toUpperCase()}
+                  </span>
+                </div>
 
-              {/* Map Display */}
-              {selectedReport.location &&
-                selectedReport.location.lat &&
-                selectedReport.location.lng && (
-                  <div className="my-4">
-                    <strong>Location:</strong>
-                    <div className="mt-2 h-[300px] border-2 border-gray-300 rounded-lg overflow-hidden">
-                      <MapContainer
-                        center={[
-                          selectedReport.location.lat,
-                          selectedReport.location.lng,
-                        ]}
-                        zoom={17}
-                        style={{ height: "100%", width: "100%" }}
-                        scrollWheelZoom={false}
-                      >
-                        <TileLayer
-                          url={osm.maptiler.url}
-                          attribution={osm.maptiler.attribution}
-                        />
-                        <Marker
-                          position={[
-                            selectedReport.location.lat,
-                            selectedReport.location.lng,
-                          ]}
-                        />
-                      </MapContainer>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Coordinates: {selectedReport.location.lat.toFixed(6)},{" "}
-                      {selectedReport.location.lng.toFixed(6)}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Full Name
+                  </label>
+                  <p className="mt-1">
+                    {selectedRegistration.firstName}{" "}
+                    {selectedRegistration.lastName}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Email
+                  </label>
+                  <p className="mt-1">{selectedRegistration.email}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Contact Number
+                  </label>
+                  <p className="mt-1">{selectedRegistration.contactNumber}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Submitted Date
+                  </label>
+                  <p className="mt-1">
+                    {new Date(
+                      selectedRegistration.submittedDate
+                    ).toLocaleString()}
+                  </p>
+                </div>
+
+                {selectedRegistration.approvedDate && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Approved Date
+                    </label>
+                    <p className="mt-1">
+                      {new Date(
+                        selectedRegistration.approvedDate
+                      ).toLocaleString()}
                     </p>
                   </div>
                 )}
 
-              {!selectedReport.location && (
-                <div className="my-2">
-                  <strong>Location:</strong>
-                  <div className="text-sm text-gray-500 mt-1">
-                    No location selected
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <strong>Photos:</strong>
-                {selectedReport.photos && selectedReport.photos.length > 0 ? (
-                  <ul className="space-y-2">
-                    {selectedReport.photos.map((p, i) => (
-                      <li key={i} className="text-sm text-gray-700">
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="text-sm text-gray-500 mt-1">
-                    No photos attached
-                  </div>
-                )}
+                {selectedRegistration.status === "rejected" &&
+                  selectedRegistration.rejectReason && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Rejection Reason
+                      </label>
+                      <p className="mt-1 text-red-600">
+                        {selectedRegistration.rejectReason}
+                      </p>
+                      {selectedRegistration.rejectedDate && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          Rejected:{" "}
+                          {new Date(
+                            selectedRegistration.rejectedDate
+                          ).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  )}
               </div>
-
-              <div className="mt-2">
-                <strong>Date:</strong>
-                <div className="text-sm text-gray-700">
-                  {selectedReport.date
-                    ? new Date(selectedReport.date).toLocaleString()
-                    : "N/A"}
-                </div>
-              </div>
-
-              {/* Show assigned worker and in progress date for In Progress and Resolved statuses */}
-              {(selectedReport.status === "In Progress" ||
-                selectedReport.status === "Resolved") && (
-                <>
-                  {selectedReport.assignedTo && (
-                    <div className="mt-2">
-                      <strong>Assigned To:</strong>
-                      <div className="text-sm text-gray-700">
-                        {selectedReport.assignedTo}
-                      </div>
-                    </div>
-                  )}
-                  {selectedReport.inProgressDate && (
-                    <div className="mt-2">
-                      <strong>Marked In Progress:</strong>
-                      <div className="text-sm text-gray-700">
-                        {new Date(
-                          selectedReport.inProgressDate
-                        ).toLocaleString()}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* Additional fields for "Under Review" status */}
-              {selectedReport.status === "Under Review" && (
-                <div className="mt-4 p-3 bg-orange-50 rounded-md">
-                  <div>
-                    <strong className="text-orange-800">Assign To:</strong>
-                    <input
-                      type="text"
-                      value={assignedTo}
-                      onChange={(e) => setAssignedTo(e.target.value)}
-                      className="w-full mt-1 p-2 border border-orange-200 rounded-md text-sm"
-                      placeholder="Enter worker name or department..."
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Additional fields for "In Progress" status */}
-              {selectedReport.status === "In Progress" && (
-                <div className="mt-4 p-3 bg-purple-50 rounded-md">
-                  <strong className="text-purple-800">
-                    Resolution Details:
-                  </strong>
-                  <textarea
-                    value={resolutionDetails}
-                    onChange={(e) => setResolutionDetails(e.target.value)}
-                    className="w-full mt-2 p-2 border border-purple-200 rounded-md text-sm"
-                    rows="4"
-                    placeholder="Enter resolution details, actions taken, etc..."
-                  />
-                </div>
-              )}
-
-              {/* Additional fields for "Resolved" status */}
-              {selectedReport.status === "Resolved" && (
-                <div className="mt-4 p-3 bg-green-50 rounded-md">
-                  <strong className="text-green-800">
-                    Resolution Details:
-                  </strong>
-                  <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
-                    {selectedReport.resolutionDetails || "No details provided"}
-                  </p>
-                  <div className="mt-2">
-                    <strong className="text-green-800">Resolved Date:</strong>
-                    <div className="text-sm text-gray-700">
-                      {selectedReport.resolvedDate
-                        ? new Date(selectedReport.resolvedDate).toLocaleString()
-                        : "N/A"}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Additional fields for "Invalid" status */}
-              {selectedReport.status === "Invalid" && (
-                <div className="mt-4 p-3 bg-red-50 rounded-md">
-                  <strong className="text-red-800">
-                    Reason for Invalidity:
-                  </strong>
-                  <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
-                    {selectedReport.invalidReason ||
-                      "This report has been marked as invalid by the admin team."}
-                  </p>
-                  {selectedReport.invalidDate && (
-                    <div className="mt-2">
-                      <strong className="text-red-800">Marked Invalid:</strong>
-                      <div className="text-sm text-gray-700">
-                        {new Date(selectedReport.invalidDate).toLocaleString()}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
 
-            {/* Dynamic Action Buttons based on Status */}
-            <div className="mt-6 flex justify-start gap-x-2 flex-wrap">
-              {selectedReport.status === "Submitted" && (
+            {/* Action Buttons */}
+            <div className="mt-6 flex justify-end gap-2">
+              {selectedRegistration.status === "pending" && (
                 <>
                   <button
-                    onClick={handleAccept}
-                    className="px-4 py-2 bg-[#00BC3A] text-white rounded-md cursor-pointer hover:bg-[#009d30]"
+                    onClick={() => handleApprove(selectedRegistration)}
+                    className="px-4 py-2 bg-[#00BC3A] text-white rounded-md hover:bg-[#009d30] transition"
                   >
-                    Accept
+                    Approve
                   </button>
                   <button
-                    onClick={handleMarkInvalid}
-                    className="px-4 py-2 bg-[#a52c2c] text-white rounded-md cursor-pointer hover:bg-[#8a2424]"
+                    onClick={() => setShowRejectModal(true)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
                   >
-                    Mark as Invalid
+                    Reject
                   </button>
                 </>
               )}
 
-              {selectedReport.status === "Under Review" && (
-                <>
-                  <button
-                    onClick={handleMarkInProgress}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-md cursor-pointer hover:bg-purple-700"
-                  >
-                    Mark as In Progress
-                  </button>
-                  <button
-                    onClick={handleMarkInvalid}
-                    className="px-4 py-2 bg-[#a52c2c] text-white rounded-md cursor-pointer hover:bg-[#8a2424]"
-                  >
-                    Mark as Invalid
-                  </button>
-                </>
-              )}
-
-              {selectedReport.status === "In Progress" && (
-                <>
-                  <button
-                    onClick={handleMarkResolved}
-                    className="px-4 py-2 bg-[#00BC3A] text-white rounded-md cursor-pointer hover:bg-[#009d30]"
-                  >
-                    Mark as Resolved
-                  </button>
-                  <button
-                    onClick={handleMarkInvalid}
-                    className="px-4 py-2 bg-[#a52c2c] text-white rounded-md cursor-pointer hover:bg-[#8a2424]"
-                  >
-                    Mark as Invalid
-                  </button>
-                </>
-              )}
-
-              {selectedReport.status === "Resolved" && (
+              {/* Remove Admin Logic */}
+              {selectedRegistration.status === "approved" && (
                 <button
-                  onClick={handleReopen}
-                  className="px-4 py-2 bg-orange-500 text-white rounded-md cursor-pointer hover:bg-orange-600"
+                  onClick={() => handleRemoveAdmin(selectedRegistration)}
+                  className="px-4 py-2 bg-red-700 text-white rounded-md hover:bg-red-800 transition"
                 >
-                  Reopen Report
+                  Remove Admin
                 </button>
               )}
 
-              {selectedReport.status === "Invalid" && (
+              {selectedRegistration.status === "rejected" && (
                 <button
-                  onClick={handleReopen}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md cursor-pointer hover:bg-blue-600"
+                  onClick={() => handleRemoveAdmin(selectedRegistration)}
+                  className="px-4 py-2 bg-red-700 text-white rounded-md hover:bg-red-800 transition"
                 >
-                  Reopen as Under Review
+                  Remove Admin
                 </button>
               )}
 
               <button
                 onClick={closeModal}
-                className="px-4 py-2 bg-[#01165A] text-white rounded-md cursor-pointer hover:bg-[#012050]"
+                className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition"
               >
                 Close
               </button>
@@ -631,36 +494,35 @@ export default function AdminRegistrations() {
         </div>
       )}
 
-      {/* Invalid-reason modal (opened when admin wants to mark invalid) */}
-      {showInvalidModal && selectedReport && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg p-6 w-11/12 max-w-lg max-h-[80vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold">
-              Reason to mark report as Invalid
-            </h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Please enter a short reason explaining why this report is invalid.
+      {/* Reject Reason Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Reason for Rejection</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Please provide a reason for rejecting this admin registration.
             </p>
-
             <textarea
-              value={invalidReason}
-              onChange={(e) => setInvalidReason(e.target.value)}
-              className="w-full mt-4 p-3 border border-gray-200 rounded-md text-sm h-36 resize-y"
-              placeholder="Enter reason here..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-md text-sm h-32 resize-y focus:outline-none focus:ring-2 focus:ring-[#01165A]"
+              placeholder="Enter rejection reason..."
             />
-
-            <div className="mt-4 flex items-center gap-x-2 justify-end">
+            <div className="mt-4 flex justify-end gap-2">
               <button
-                onClick={cancelMarkInvalid}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectReason("");
+                }}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition"
               >
                 Cancel
               </button>
               <button
-                onClick={confirmMarkInvalid}
-                className="px-4 py-2 bg-[#a52c2c] text-white rounded-md cursor-pointer hover:bg-[#8a2424]"
+                onClick={handleReject}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
               >
-                Confirm & Mark Invalid
+                Confirm Rejection
               </button>
             </div>
           </div>
