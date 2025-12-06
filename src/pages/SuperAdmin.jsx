@@ -16,7 +16,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-export default function AdminManageReports() {
+export default function SuperAdminPage() {
   const location = useLocation();
   const reportsFromState = location.state?.reports;
 
@@ -30,13 +30,36 @@ export default function AdminManageReports() {
 
   const [activeFilter, setActiveFilter] = useState("All");
 
+  // Function to generate random report ID
+  const generateReportId = () => {
+    return Math.floor(100000 + Math.random() * 900000); // 6-digit random number
+  };
+
   const [reports, setReports] = useState(() => {
     try {
       const raw = localStorage.getItem("chmrs_reports");
-      const persisted = raw ? JSON.parse(raw) : [];
-      return reportsFromState && reportsFromState.length > 0
-        ? reportsFromState
-        : persisted;
+      let persisted = raw ? JSON.parse(raw) : [];
+
+      // Assign random IDs to reports that don't have one
+      persisted = persisted.map((report) => ({
+        ...report,
+        reportId: report.reportId || generateReportId(),
+      }));
+
+      const finalReports =
+        reportsFromState && reportsFromState.length > 0
+          ? reportsFromState.map((report) => ({
+              ...report,
+              reportId: report.reportId || generateReportId(),
+            }))
+          : persisted;
+
+      // Sort by date (newest first)
+      return finalReports.sort((a, b) => {
+        const dateA = new Date(a.date || 0);
+        const dateB = new Date(b.date || 0);
+        return dateB - dateA;
+      });
     } catch (e) {
       console.error("Failed to load persisted reports", e);
       return reportsFromState || [];
@@ -207,7 +230,14 @@ export default function AdminManageReports() {
     return (report.status || "Submitted") === activeFilter;
   });
 
-  const filterOptions = ["All", "Submitted", "Under Review", "In Progress", "Resolved", "Invalid"];
+  const filterOptions = [
+    "All",
+    "Submitted",
+    "Under Review",
+    "In Progress",
+    "Resolved",
+    "Invalid",
+  ];
 
   const getFilterColorClasses = (filter) => {
     switch (filter) {
@@ -264,7 +294,7 @@ export default function AdminManageReports() {
 
             {filteredReports.map((report, index) => (
               <div
-                key={index}
+                key={report.reportId}
                 className="bg-white rounded-2xl p-6 shadow-[0px_5px_5px_rgba(0,0,0,0.25)] hover:shadow-[0px_10px_15px_rgba(0,0,0,0.25)] transition"
               >
                 <div className="flex items-baseline gap-x-3">
@@ -283,7 +313,9 @@ export default function AdminManageReports() {
                     {report.severity}
                   </h1>
 
-                  <h1 className="text-black/50">Report ID: {reports.indexOf(report) + 1}</h1>
+                  <h1 className="text-black/50">
+                    Report ID: {report.reportId}
+                  </h1>
                 </div>
 
                 {report.status && (
@@ -323,14 +355,14 @@ export default function AdminManageReports() {
 
                 <div className="flex gap-2 items-center mt-2">
                   <button
-                    onClick={() => openModal(report, reports.indexOf(report))}
+                    onClick={() => openModal(report, index)}
                     className="text-sm text-blue-700 rounded-md cursor-pointer hover:underline"
                   >
                     See more
                   </button>
 
                   <button
-                    onClick={() => handleDelete(reports.indexOf(report))}
+                    onClick={() => handleDelete(index)}
                     className="text-sm text-red-600 hover:text-red-800 bg-red-50 px-3 py-1 rounded-md"
                   >
                     Delete

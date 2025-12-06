@@ -30,13 +30,52 @@ export default function AdminManageReports() {
 
   const [activeFilter, setActiveFilter] = useState("All");
 
+  // Function to generate random report ID
+  const generateReportId = () => {
+    return Math.floor(100000 + Math.random() * 900000);
+  };
+
+  // Helper function to add action to history
+  const addActionToHistory = (report, actionType, additionalInfo = {}) => {
+    const currentAdminName =
+      localStorage.getItem("currentAdminName") || "Admin";
+    const actionHistory = report.actionHistory || [];
+
+    const newAction = {
+      action: actionType,
+      by: currentAdminName,
+      date: new Date().toISOString(),
+      ...additionalInfo,
+    };
+
+    return [...actionHistory, newAction];
+  };
+
   const [reports, setReports] = useState(() => {
     try {
       const raw = localStorage.getItem("chmrs_reports");
-      const persisted = raw ? JSON.parse(raw) : [];
-      return reportsFromState && reportsFromState.length > 0
-        ? reportsFromState
-        : persisted;
+      let persisted = raw ? JSON.parse(raw) : [];
+
+      persisted = persisted.map((report) => ({
+        ...report,
+        reportId: report.reportId || generateReportId(),
+        actionHistory: report.actionHistory || [],
+      }));
+
+      const finalReports =
+        reportsFromState && reportsFromState.length > 0
+          ? reportsFromState.map((report) => ({
+              ...report,
+              reportId: report.reportId || generateReportId(),
+              actionHistory: report.actionHistory || [],
+            }))
+          : persisted;
+
+      return finalReports.sort((a, b) => {
+        const dateA = new Date(a.date || 0);
+        const dateB = new Date(b.date || 0);
+        return dateB - dateA;
+      });
     } catch (e) {
       console.error("Failed to load persisted reports", e);
       return reportsFromState || [];
@@ -60,7 +99,13 @@ export default function AdminManageReports() {
     if (selectedIndex !== null) {
       setReports((prev) =>
         prev.map((report, i) =>
-          i === selectedIndex ? { ...report, status: "Under Review" } : report
+          i === selectedIndex
+            ? {
+                ...report,
+                status: "Under Review",
+                actionHistory: addActionToHistory(report, "Accepted"),
+              }
+            : report
         )
       );
       setShowModal(false);
@@ -85,6 +130,13 @@ export default function AdminManageReports() {
                 status: "In Progress",
                 assignedTo: assignedTo.trim(),
                 inProgressDate: new Date().toISOString(),
+                actionHistory: addActionToHistory(
+                  report,
+                  "Marked as In Progress",
+                  {
+                    assignedTo: assignedTo.trim(),
+                  }
+                ),
               }
             : report
         )
@@ -110,6 +162,9 @@ export default function AdminManageReports() {
                 status: "Resolved",
                 resolutionDetails: resolutionDetails.trim(),
                 resolvedDate: new Date().toISOString(),
+                actionHistory: addActionToHistory(report, "Resolved", {
+                  resolutionDetails: resolutionDetails.trim(),
+                }),
               }
             : report
         )
@@ -141,6 +196,9 @@ export default function AdminManageReports() {
               status: "Invalid",
               invalidReason: invalidReason.trim(),
               invalidDate: new Date().toISOString(),
+              actionHistory: addActionToHistory(report, "Marked as Invalid", {
+                reason: invalidReason.trim(),
+              }),
             }
           : report
       )
@@ -168,6 +226,7 @@ export default function AdminManageReports() {
                 status: "Under Review",
                 invalidReason: undefined,
                 invalidDate: undefined,
+                actionHistory: addActionToHistory(report, "Reopened"),
               }
             : report
         )
@@ -207,7 +266,14 @@ export default function AdminManageReports() {
     return (report.status || "Submitted") === activeFilter;
   });
 
-  const filterOptions = ["All", "Submitted", "Under Review", "In Progress", "Resolved", "Invalid"];
+  const filterOptions = [
+    "All",
+    "Submitted",
+    "Under Review",
+    "In Progress",
+    "Resolved",
+    "Invalid",
+  ];
 
   const getFilterColorClasses = (filter) => {
     switch (filter) {
@@ -231,7 +297,10 @@ export default function AdminManageReports() {
   return (
     <>
       {/* SIDEBAR */}
-      <AdminSidebar role="admin" />
+      <AdminSidebar
+        role={localStorage.getItem("userRole") || "admin"}
+        firstName={localStorage.getItem("currentAdminFirstName") || "Admin"}
+      />
 
       {/* CONTENT */}
       <div className="ml-82 mt-28 p-4">
@@ -264,7 +333,7 @@ export default function AdminManageReports() {
 
             {filteredReports.map((report, index) => (
               <div
-                key={index}
+                key={report.reportId}
                 className="bg-white rounded-2xl p-6 shadow-[0px_5px_5px_rgba(0,0,0,0.25)] hover:shadow-[0px_10px_15px_rgba(0,0,0,0.25)] transition"
               >
                 <div className="flex items-baseline gap-x-3">
@@ -283,7 +352,9 @@ export default function AdminManageReports() {
                     {report.severity}
                   </h1>
 
-                  <h1 className="text-black/50">Report ID: {reports.indexOf(report) + 1}</h1>
+                  <h1 className="text-black/50">
+                    Report ID: {report.reportId}
+                  </h1>
                 </div>
 
                 {report.status && (
@@ -323,14 +394,14 @@ export default function AdminManageReports() {
 
                 <div className="flex gap-2 items-center mt-2">
                   <button
-                    onClick={() => openModal(report, reports.indexOf(report))}
+                    onClick={() => openModal(report, index)}
                     className="text-sm text-blue-700 rounded-md cursor-pointer hover:underline"
                   >
                     See more
                   </button>
 
                   <button
-                    onClick={() => handleDelete(reports.indexOf(report))}
+                    onClick={() => handleDelete(index)}
                     className="text-sm text-red-600 hover:text-red-800 bg-red-50 px-3 py-1 rounded-md"
                   >
                     Delete
@@ -387,6 +458,57 @@ export default function AdminManageReports() {
               <p className="text-sm text-gray-600 my-3">
                 {selectedReport.description}
               </p>
+
+              {/* ACTION HISTORY SECTION */}
+              {selectedReport.actionHistory &&
+                selectedReport.actionHistory.length > 0 && (
+                  <div className="my-4 p-4 bg-blue-50 rounded-md border border-blue-200">
+                    <strong className="text-blue-800 flex items-center gap-2">
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      Action History:
+                    </strong>
+                    <div className="mt-3 space-y-2">
+                      {selectedReport.actionHistory.map((action, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-start gap-2 text-sm"
+                        >
+                          <span className="text-blue-600 mt-1">✓</span>
+                          <div className="flex-1">
+                            <span className="font-medium text-gray-800">
+                              {action.action}
+                            </span>
+                            <span className="text-gray-600"> by </span>
+                            <span className="font-medium text-blue-700">
+                              {action.by}
+                            </span>
+                            {action.assignedTo && (
+                              <span className="text-gray-600">
+                                {" "}
+                                (Assigned to: {action.assignedTo})
+                              </span>
+                            )}
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {new Date(action.date).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
               {/* Map Display */}
               {selectedReport.location &&
@@ -639,7 +761,7 @@ export default function AdminManageReports() {
         </div>
       )}
 
-      {/* Invalid-reason modal (opened when admin wants to mark invalid) */}
+      {/* Invalid-reason modal */}
       {showInvalidModal && selectedReport && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg p-6 w-11/12 max-w-lg max-h-[80vh] overflow-y-auto">

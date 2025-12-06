@@ -8,7 +8,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showRoleSignupModal, setShowRoleSignupModal] = useState(false);
-  
+
   // Alert modal states
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
@@ -51,6 +51,7 @@ export default function Login() {
     if (adminUser) {
       localStorage.setItem("userRole", "admin");
       localStorage.setItem("currentAdminId", adminUser.id);
+      localStorage.setItem("currentAdminFirstName", adminUser.firstName);
       localStorage.setItem(
         "currentAdminName",
         `${adminUser.firstName} ${adminUser.lastName}`
@@ -204,9 +205,7 @@ export default function Login() {
               <h3 className="text-lg font-bold text-[#01165A] mb-3">
                 {alertTitle}
               </h3>
-              <p className="text-sm text-gray-700 mb-6">
-                {alertMessage}
-              </p>
+              <p className="text-sm text-gray-700 mb-6">{alertMessage}</p>
               <div className="flex justify-end">
                 <button
                   onClick={() => setShowAlertModal(false)}

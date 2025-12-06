@@ -1,13 +1,13 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-export default function AdminSidebar({ role = "admin" }) {
+export default function AdminSidebar({ role = "admin", firstName = "Admin" }) {
   const isSuperAdmin = role === "superadmin";
 
   return (
     <div className="h-screen w-72 bg-[#01165A] text-white flex flex-col fixed left-0 top-0 text-center">
       <h1 className="text-lg font-bold my-20">
-        Welcome {isSuperAdmin ? "Super Admin" : "Admin"}!
+        Welcome, {isSuperAdmin ? "Super Admin" : firstName}!
       </h1>
       <hr />
 
@@ -26,7 +26,7 @@ export default function AdminSidebar({ role = "admin" }) {
           Report Analytics
         </Link>
         <hr />
-        
+
         {/* Only show Admin Registrations for Super Admin */}
         {isSuperAdmin && (
           <>
@@ -39,7 +39,7 @@ export default function AdminSidebar({ role = "admin" }) {
             <hr />
           </>
         )}
-        
+
         <Link
           to="/admin_activity_log"
           className="hover:bg-white hover:text-[#01165A] transition-all duration-200 text-sm py-7"

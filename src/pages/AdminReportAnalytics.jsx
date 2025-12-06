@@ -7,7 +7,10 @@ export default function AdminReportAnalytics() {
   return (
     <>
       {/* SIDEBAR */}
-      <AdminSidebar role={userRole} />
+      <AdminSidebar
+        role={userRole}
+        firstName={localStorage.getItem("currentAdminFirstName") || "Admin"}
+      />
     </>
   );
 }
