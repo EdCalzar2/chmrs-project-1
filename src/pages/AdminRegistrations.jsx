@@ -6,6 +6,12 @@ export default function AdminRegistrations() {
   const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showValidationErrorModal, setShowValidationErrorModal] = useState(false);
+  const [showRejectionConfirmModal, setShowRejectionConfirmModal] = useState(false);
+  const [showRemovalConfirmModal, setShowRemovalConfirmModal] = useState(false);
+  const [showRemovalConfirmationDialog, setShowRemovalConfirmationDialog] = useState(false);
+  const [registrationToRemove, setRegistrationToRemove] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [filter, setFilter] = useState("pending"); // pending, approved, rejected, all
 
@@ -75,12 +81,15 @@ export default function AdminRegistrations() {
     saveRegistrations(updated);
     setShowModal(false);
     setSelectedRegistration(null);
-    alert("Admin registration approved successfully!");
+    setShowSuccessModal(true);
+    setTimeout(() => {
+      setShowSuccessModal(false);
+    }, 2000);
   };
 
   const handleReject = () => {
     if (!rejectReason.trim()) {
-      alert("Please provide a reason for rejection");
+      setShowValidationErrorModal(true);
       return;
     }
 
@@ -100,15 +109,21 @@ export default function AdminRegistrations() {
     setShowModal(false);
     setSelectedRegistration(null);
     setRejectReason("");
-    alert("Admin registration rejected.");
+    setShowRejectionConfirmModal(true);
+    setTimeout(() => {
+      setShowRejectionConfirmModal(false);
+    }, 2000);
   };
 
-  // Remove admin feature
+  // Remove admin feature (shows confirmation dialog first)
   const handleRemoveAdmin = (registration) => {
-    if (
-      !window.confirm("Are you sure you want to delete this admin permanently?")
-    )
-      return;
+    setRegistrationToRemove(registration);
+    setShowRemovalConfirmationDialog(true);
+  };
+
+  const confirmRemoveAdmin = () => {
+    if (!registrationToRemove) return;
+    const registration = registrationToRemove;
 
     // Remove from approved_admins
     const approvedAdmins = JSON.parse(
@@ -128,7 +143,18 @@ export default function AdminRegistrations() {
     setShowModal(false);
     setSelectedRegistration(null);
 
-    alert("Admin has been permanently removed.");
+    setShowRemovalConfirmModal(true);
+    setTimeout(() => {
+      setShowRemovalConfirmModal(false);
+    }, 1500);
+
+    setShowRemovalConfirmationDialog(false);
+    setRegistrationToRemove(null);
+  };
+
+  const cancelRemoveAdmin = () => {
+    setShowRemovalConfirmationDialog(false);
+    setRegistrationToRemove(null);
   };
 
   const openModal = (registration) => {
@@ -525,6 +551,107 @@ export default function AdminRegistrations() {
                 Confirm Rejection
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/40 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
+            <div className="flex justify-center mb-4">
+              <div className="bg-green-100 rounded-full p-3">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+            <h2 className="text-xl font-bold text-center text-gray-800 mb-2">Approved</h2>
+            <p className="text-sm text-center text-gray-600">
+              Admin registration approved successfully!
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Validation Error Modal */}
+      {showValidationErrorModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
+            <div className="flex justify-center mb-4">
+              <div className="bg-red-100 rounded-full p-3">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4v2m0 4v2" />
+                </svg>
+              </div>
+            </div>
+            <h2 className="text-xl font-bold text-center text-gray-800 mb-2">Required Field</h2>
+            <p className="text-sm text-center text-gray-600 mb-6">
+              Please provide a reason for rejection
+            </p>
+            <button
+              onClick={() => setShowValidationErrorModal(false)}
+              className="w-full bg-red-600 text-white font-bold py-2 rounded-md hover:bg-red-700 transition"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Confirmation Modal */}
+      {showRejectionConfirmModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
+            <div className="flex justify-center mb-4">
+              <div className="bg-yellow-100 rounded-full p-3">
+                <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4v2m0-10l.94-1.88A2 2 0 0015 4H9a2 2 0 00-1.94 2.12L7 8m10 0a2 2 0 11-4 0m4 0a2 2 0 00-4 0" />
+                </svg>
+              </div>
+            </div>
+            <h2 className="text-xl font-bold text-center text-gray-800 mb-2">Rejected</h2>
+            <p className="text-sm text-center text-gray-600">
+              Admin registration rejected.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Removal Confirmation Dialog (asks user to confirm deletion) */}
+      {showRemovalConfirmationDialog && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
+            <h2 className="text-xl font-bold text-center text-gray-800 mb-2">Confirm Deletion</h2>
+            <p className="text-sm text-center text-gray-600 mb-6">
+              Are you sure you want to delete this admin permanently? This action cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={cancelRemoveAdmin}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRemoveAdmin}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+              >
+                Delete Permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Removal Confirmation Modal (display after deletion) */}
+      {showRemovalConfirmModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
+            <h2 className="text-xl font-bold text-center text-gray-800 mb-2">Removed</h2>
+            <p className="text-sm text-center text-gray-600">
+              Admin has been permanently removed.
+            </p>
           </div>
         </div>
       )}
