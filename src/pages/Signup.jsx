@@ -12,6 +12,7 @@ export default function Signup() {
     password: "",
     confirmPassword: "",
   });
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handleInputChange = (e) => {
     setFormData({
@@ -80,8 +81,11 @@ export default function Signup() {
       JSON.stringify(registeredResidents)
     );
 
-    alert("Registration successful! Please login with your credentials.");
-    navigate("/");
+    setShowSuccessModal(true);
+    setTimeout(() => {
+      setShowSuccessModal(false);
+      navigate("/");
+    }, 2000);
   };
 
   return (
@@ -155,6 +159,32 @@ export default function Signup() {
           </Link>
         </p>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/40 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
+            <div className="flex justify-center mb-4">
+              <div className="bg-green-100 rounded-full p-3">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+            <h2 className="text-xl font-bold text-center text-gray-800 mb-2">Registration Successful</h2>
+            <p className="text-sm text-center text-gray-600 mb-6">Please login with your credentials.</p>
+            <button
+              onClick={() => {
+                setShowSuccessModal(false);
+                navigate("/");
+              }}
+              className="w-full bg-[#00BC3A] text-white font-bold py-2 rounded-md hover:bg-[#008a2c] transition-all duration-300"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
