@@ -16,7 +16,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-export default function SuperAdmin() {
+export default function AdminManageReports() {
   const location = useLocation();
   const reportsFromState = location.state?.reports;
 
@@ -27,6 +27,9 @@ export default function SuperAdmin() {
   const [resolutionDetails, setResolutionDetails] = useState("");
   const [showInvalidModal, setShowInvalidModal] = useState(false);
   const [invalidReason, setInvalidReason] = useState("");
+
+  // ⭐ NEW STATE for filtering
+  const [activeFilter, setActiveFilter] = useState("All");
 
   const [reports, setReports] = useState(() => {
     try {
@@ -201,6 +204,41 @@ export default function SuperAdmin() {
     setShowInvalidModal(false);
   };
 
+  // ⭐ NEW FUNCTION to handle filter button clicks
+  const handleFilterChange = (filter) => {
+    setActiveFilter(filter);
+  };
+
+  // ⭐ COMPUTED VALUE for filtered reports
+  const filteredReports = reports.filter((report) => {
+    if (activeFilter === "All") return true;
+    return (report.status || "Submitted") === activeFilter;
+  });
+
+  // Define the filter options for the UI
+  const filterOptions = ["All", "Submitted", "Under Review", "In Progress", "Resolved", "Invalid"];
+
+  // Helper function to determine the status color classes for the filter buttons
+  const getFilterColorClasses = (filter) => {
+    switch (filter) {
+      case "All":
+        return "bg-gray-200 text-gray-800 hover:bg-gray-300";
+      case "Submitted":
+        return "bg-blue-200 text-blue-800 hover:bg-blue-300";
+      case "Under Review":
+        return "bg-orange-200 text-orange-800 hover:bg-orange-300";
+      case "In Progress":
+        return "bg-purple-200 text-purple-800 hover:bg-purple-300";
+      case "Resolved":
+        return "bg-green-200 text-green-800 hover:bg-green-300";
+      case "Invalid":
+        return "bg-red-200 text-red-800 hover:bg-red-300";
+      default:
+        return "bg-gray-200 text-gray-800 hover:bg-gray-300";
+    }
+  };
+
+
   return (
     <>
       {/* SIDEBAR */}
@@ -208,14 +246,34 @@ export default function SuperAdmin() {
 
       {/* CONTENT */}
       <div className="ml-82 mt-28 p-4">
+        {/* ⭐ NEW: Filter Buttons based on the second image's structure */}
+        <div className="flex justify-center mb-8">
+          <div className="flex gap-x-2 p-1 bg-gray-100 rounded-full shadow-inner">
+            {filterOptions.map((filter) => (
+              <button
+                key={filter}
+                onClick={() => handleFilterChange(filter)}
+                className={`text-sm font-semibold px-4 py-2 rounded-full transition duration-150 ease-in-out ${
+                  activeFilter === filter
+                    ? "bg-[#01165A] text-white shadow-md"
+                    : getFilterColorClasses(filter)
+                }`}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-y-6">
-          {reports.length === 0 && (
+          {filteredReports.length === 0 && (
             <p className="text-gray-500 text-center mt-10">
-              No reports submitted yet.
+              No reports found for the status: **{activeFilter}**.
             </p>
           )}
 
-          {reports.map((report, index) => (
+          {/* Map over filteredReports instead of all reports */}
+          {filteredReports.map((report, index) => (
             <div
               key={index}
               className="bg-white rounded-2xl p-6 shadow-[0px_5px_5px_rgba(0,0,0,0.25)] hover:shadow-[0px_10px_15px_rgba(0,0,0,0.25)] transition ml-16 w-250"
@@ -236,7 +294,7 @@ export default function SuperAdmin() {
                   {report.severity}
                 </h1>
 
-                <h1 className="text-black/50">Report ID: {index + 1}</h1>
+                <h1 className="text-black/50">Report ID: {reports.indexOf(report) + 1}</h1> {/* Use original index for ID display */}
               </div>
 
               {report.status && (
@@ -244,7 +302,7 @@ export default function SuperAdmin() {
                   <span className="text-black mr-1 font-bold">Status:</span>
                   <span
                     className={`px-2 rounded-full font-medium ${
-                      report.status === "Submitted"
+                      (report.status || "Submitted") === "Submitted"
                         ? "text-blue-700 bg-blue-100"
                         : report.status === "Under Review"
                         ? "text-orange-700 bg-orange-100"
@@ -257,7 +315,7 @@ export default function SuperAdmin() {
                         : "text-gray-600 bg-gray-100"
                     }`}
                   >
-                    {report.status}
+                    {report.status || "Submitted"}
                   </span>
                 </div>
               )}
@@ -276,14 +334,14 @@ export default function SuperAdmin() {
 
               <div className="flex gap-2 items-center mt-2">
                 <button
-                  onClick={() => openModal(report, index)}
+                  onClick={() => openModal(report, reports.indexOf(report))} // Pass the original index to openModal
                   className="text-sm text-blue-700 rounded-md cursor-pointer hover:underline"
                 >
                   See more
                 </button>
 
                 <button
-                  onClick={() => handleDelete(index)}
+                  onClick={() => handleDelete(reports.indexOf(report))} // Pass the original index to handleDelete
                   className="text-sm text-red-600 hover:text-red-800 bg-red-50 px-3 py-1 rounded-md"
                 >
                   Delete
@@ -319,7 +377,7 @@ export default function SuperAdmin() {
                 <strong>Status:</strong>
                 <div
                   className={`ml-1 text-sm px-2 rounded-full ${
-                    selectedReport.status === "Submitted"
+                    (selectedReport.status || "Submitted") === "Submitted"
                       ? "text-blue-700 bg-blue-100"
                       : selectedReport.status === "Under Review"
                       ? "text-orange-700 bg-orange-100"
@@ -332,7 +390,7 @@ export default function SuperAdmin() {
                       : "text-gray-700"
                   }`}
                 >
-                  {selectedReport.status || "N/A"}
+                  {selectedReport.status || "Submitted"}
                 </div>
               </div>
 
