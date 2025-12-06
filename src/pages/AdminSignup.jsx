@@ -140,9 +140,6 @@ export default function AdminSignup() {
     console.log("Total registrations:", existingRegistrations.length);
 
     setShowSuccessModal(true);
-    setTimeout(() => {
-      navigate("/");
-    }, 2000);
   };
 
   return (

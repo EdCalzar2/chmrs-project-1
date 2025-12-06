@@ -146,7 +146,7 @@ export default function AdminRegistrations() {
     setShowRemovalConfirmModal(true);
     setTimeout(() => {
       setShowRemovalConfirmModal(false);
-    }, 2000);
+    }, 1500);
 
     setShowRemovalConfirmationDialog(false);
     setRegistrationToRemove(null);
@@ -622,18 +622,11 @@ export default function AdminRegistrations() {
       {showRemovalConfirmationDialog && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
-            <div className="flex justify-center mb-4">
-              <div className="bg-yellow-100 rounded-full p-3">
-                <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4v2m0-10l.94-1.88A2 2 0 0115 4H9a2 2 0 00-1.94 2.12L7 8m10 0a2 2 0 11-4 0m4 0a2 2 0 00-4 0" />
-                </svg>
-              </div>
-            </div>
             <h2 className="text-xl font-bold text-center text-gray-800 mb-2">Confirm Deletion</h2>
             <p className="text-sm text-center text-gray-600 mb-6">
               Are you sure you want to delete this admin permanently? This action cannot be undone.
             </p>
-            <div className="flex gap-2 justify-end">
+            <div className="flex gap-2 justify-center">
               <button
                 onClick={cancelRemoveAdmin}
                 className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition"
@@ -655,13 +648,6 @@ export default function AdminRegistrations() {
       {showRemovalConfirmModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
-            <div className="flex justify-center mb-4">
-              <div className="bg-red-100 rounded-full p-3">
-                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </div>
-            </div>
             <h2 className="text-xl font-bold text-center text-gray-800 mb-2">Removed</h2>
             <p className="text-sm text-center text-gray-600">
               Admin has been permanently removed.

@@ -82,11 +82,8 @@ export default function Signup() {
     );
 
     setShowSuccessModal(true);
-    setTimeout(() => {
-      setShowSuccessModal(false);
-      navigate("/");
-    }, 2000);
-  };
+  }
+
 
   return (
     <>
