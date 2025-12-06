@@ -28,7 +28,6 @@ export default function AdminManageReports() {
   const [showInvalidModal, setShowInvalidModal] = useState(false);
   const [invalidReason, setInvalidReason] = useState("");
 
-  // ⭐ NEW STATE for filtering
   const [activeFilter, setActiveFilter] = useState("All");
 
   const [reports, setReports] = useState(() => {
@@ -122,14 +121,11 @@ export default function AdminManageReports() {
     }
   };
 
-  // open the invalid-reason input modal
   const handleMarkInvalid = () => {
-    // show the input modal so admin can enter a reason
     setInvalidReason(selectedReport?.invalidReason || "");
     setShowInvalidModal(true);
   };
 
-  // actually mark the selected report as invalid and persist reason/date
   const confirmMarkInvalid = () => {
     if (selectedIndex === null) return;
     if (!invalidReason.trim()) {
@@ -150,7 +146,6 @@ export default function AdminManageReports() {
       )
     );
 
-    // close both modals and reset selection
     setShowInvalidModal(false);
     setShowModal(false);
     setSelectedReport(null);
@@ -171,7 +166,6 @@ export default function AdminManageReports() {
             ? {
                 ...report,
                 status: "Under Review",
-                // clear invalid markers when reopening
                 invalidReason: undefined,
                 invalidDate: undefined,
               }
@@ -204,40 +198,35 @@ export default function AdminManageReports() {
     setShowInvalidModal(false);
   };
 
-  // ⭐ NEW FUNCTION to handle filter button clicks
   const handleFilterChange = (filter) => {
     setActiveFilter(filter);
   };
 
-  // ⭐ COMPUTED VALUE for filtered reports
   const filteredReports = reports.filter((report) => {
     if (activeFilter === "All") return true;
     return (report.status || "Submitted") === activeFilter;
   });
 
-  // Define the filter options for the UI
   const filterOptions = ["All", "Submitted", "Under Review", "In Progress", "Resolved", "Invalid"];
 
-  // Helper function to determine the status color classes for the filter buttons
   const getFilterColorClasses = (filter) => {
     switch (filter) {
       case "All":
-        return "bg-gray-200 text-gray-800 hover:bg-gray-300";
+        return "bg-[#01165A] text-white hover:bg-[#001d79]";
       case "Submitted":
-        return "bg-blue-200 text-blue-800 hover:bg-blue-300";
+        return "bg-[#01165A] text-white hover:bg-[#001d79]";
       case "Under Review":
-        return "bg-orange-200 text-orange-800 hover:bg-orange-300";
+        return "bg-[#01165A] text-white hover:bg-[#001d79]";
       case "In Progress":
-        return "bg-purple-200 text-purple-800 hover:bg-purple-300";
+        return "bg-[#01165A] text-white hover:bg-[#001d79]";
       case "Resolved":
-        return "bg-green-200 text-green-800 hover:bg-green-300";
+        return "bg-[#01165A] text-white hover:bg-[#001d79]";
       case "Invalid":
-        return "bg-red-200 text-red-800 hover:bg-red-300";
+        return "bg-[#01165A] text-white hover:bg-[#001d79]";
       default:
-        return "bg-gray-200 text-gray-800 hover:bg-gray-300";
+        return "bg-[#01165A] text-white hover:bg-[#001d79]";
     }
   };
-
 
   return (
     <>
@@ -246,16 +235,15 @@ export default function AdminManageReports() {
 
       {/* CONTENT */}
       <div className="ml-82 mt-28 p-4">
-        {/* ⭐ NEW: Filter Buttons based on the second image's structure */}
         <div className="flex justify-center mb-8">
-          <div className="flex gap-x-2 p-1 bg-gray-100 rounded-full shadow-inner">
+          <div className="flex gap-x-5 p-1 bg-gray-100 rounded-full shadow-inner">
             {filterOptions.map((filter) => (
               <button
                 key={filter}
                 onClick={() => handleFilterChange(filter)}
-                className={`text-sm font-semibold px-4 py-2 rounded-full transition duration-150 ease-in-out ${
+                className={`text-sm px-6 font-bold py-4 rounded-full transition duration-150 ease-in-out ${
                   activeFilter === filter
-                    ? "bg-[#01165A] text-white shadow-md"
+                    ? "bg-white text-[#01165A] shadow-md"
                     : getFilterColorClasses(filter)
                 }`}
               >
@@ -265,90 +253,92 @@ export default function AdminManageReports() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-y-6">
-          {filteredReports.length === 0 && (
-            <p className="text-gray-500 text-center mt-10">
-              No reports found for the status: **{activeFilter}**.
-            </p>
-          )}
+        {/* Centered container for reports */}
+        <div className="max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 gap-y-6">
+            {filteredReports.length === 0 && (
+              <p className="text-gray-500 text-center mt-10">
+                No reports found for the status: {activeFilter}
+              </p>
+            )}
 
-          {/* Map over filteredReports instead of all reports */}
-          {filteredReports.map((report, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-2xl p-6 shadow-[0px_5px_5px_rgba(0,0,0,0.25)] hover:shadow-[0px_10px_15px_rgba(0,0,0,0.25)] transition ml-16 w-250"
-            >
-              <div className="flex items-baseline gap-x-3">
-                <h1 className="font-bold uppercase">{report.hazard}</h1>
+            {filteredReports.map((report, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-2xl p-6 shadow-[0px_5px_5px_rgba(0,0,0,0.25)] hover:shadow-[0px_10px_15px_rgba(0,0,0,0.25)] transition"
+              >
+                <div className="flex items-baseline gap-x-3">
+                  <h1 className="font-bold uppercase">{report.hazard}</h1>
 
-                <h1
-                  className={
-                    `px-3 rounded-full text-white ` +
-                    (report.severity === "Minor"
-                      ? "bg-yellow-500 border-yellow-600"
-                      : report.severity === "Moderate"
-                      ? "bg-orange-500 border-orange-600"
-                      : "bg-red-500 border-red-600")
-                  }
-                >
-                  {report.severity}
+                  <h1
+                    className={
+                      `px-3 rounded-full text-white ` +
+                      (report.severity === "Minor"
+                        ? "bg-yellow-500 border-yellow-600"
+                        : report.severity === "Moderate"
+                        ? "bg-orange-500 border-orange-600"
+                        : "bg-red-500 border-red-600")
+                    }
+                  >
+                    {report.severity}
+                  </h1>
+
+                  <h1 className="text-black/50">Report ID: {reports.indexOf(report) + 1}</h1>
+                </div>
+
+                {report.status && (
+                  <div className="flex items-center mt-2 mb-4">
+                    <span className="text-black mr-1 font-bold">Status:</span>
+                    <span
+                      className={`px-2 rounded-full font-medium ${
+                        (report.status || "Submitted") === "Submitted"
+                          ? "text-blue-700 bg-blue-100"
+                          : report.status === "Under Review"
+                          ? "text-orange-700 bg-orange-100"
+                          : report.status === "In Progress"
+                          ? "text-purple-700 bg-purple-100"
+                          : report.status === "Resolved"
+                          ? "text-green-700 bg-green-100"
+                          : report.status === "Invalid"
+                          ? "text-red-700 bg-red-100"
+                          : "text-gray-600 bg-gray-100"
+                      }`}
+                    >
+                      {report.status || "Submitted"}
+                    </span>
+                  </div>
+                )}
+
+                <p className="text-black/60 mb-4">
+                  {report.description && report.description.length > 100
+                    ? report.description.substring(0, 60) + "..."
+                    : report.description}
+                </p>
+                <h1 className="text-sm text-black/50">
+                  Date:{" "}
+                  {report.date
+                    ? new Date(report.date).toLocaleString()
+                    : new Date().toLocaleDateString()}
                 </h1>
 
-                <h1 className="text-black/50">Report ID: {reports.indexOf(report) + 1}</h1> {/* Use original index for ID display */}
-              </div>
-
-              {report.status && (
-                <div className="flex items-center mt-2 mb-4">
-                  <span className="text-black mr-1 font-bold">Status:</span>
-                  <span
-                    className={`px-2 rounded-full font-medium ${
-                      (report.status || "Submitted") === "Submitted"
-                        ? "text-blue-700 bg-blue-100"
-                        : report.status === "Under Review"
-                        ? "text-orange-700 bg-orange-100"
-                        : report.status === "In Progress"
-                        ? "text-purple-700 bg-purple-100"
-                        : report.status === "Resolved"
-                        ? "text-green-700 bg-green-100"
-                        : report.status === "Invalid"
-                        ? "text-red-700 bg-red-100"
-                        : "text-gray-600 bg-gray-100"
-                    }`}
+                <div className="flex gap-2 items-center mt-2">
+                  <button
+                    onClick={() => openModal(report, reports.indexOf(report))}
+                    className="text-sm text-blue-700 rounded-md cursor-pointer hover:underline"
                   >
-                    {report.status || "Submitted"}
-                  </span>
+                    See more
+                  </button>
+
+                  <button
+                    onClick={() => handleDelete(reports.indexOf(report))}
+                    className="text-sm text-red-600 hover:text-red-800 bg-red-50 px-3 py-1 rounded-md"
+                  >
+                    Delete
+                  </button>
                 </div>
-              )}
-
-              <p className="text-black/60 mb-4">
-                {report.description && report.description.length > 100
-                  ? report.description.substring(0, 60) + "..."
-                  : report.description}
-              </p>
-              <h1 className="text-sm text-black/50">
-                Date:{" "}
-                {report.date
-                  ? new Date(report.date).toLocaleString()
-                  : new Date().toLocaleDateString()}
-              </h1>
-
-              <div className="flex gap-2 items-center mt-2">
-                <button
-                  onClick={() => openModal(report, reports.indexOf(report))} // Pass the original index to openModal
-                  className="text-sm text-blue-700 rounded-md cursor-pointer hover:underline"
-                >
-                  See more
-                </button>
-
-                <button
-                  onClick={() => handleDelete(reports.indexOf(report))} // Pass the original index to handleDelete
-                  className="text-sm text-red-600 hover:text-red-800 bg-red-50 px-3 py-1 rounded-md"
-                >
-                  Delete
-                </button>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
