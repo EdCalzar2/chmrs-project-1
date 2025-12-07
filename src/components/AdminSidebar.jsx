@@ -39,13 +39,6 @@ export default function AdminSidebar({ role = "admin", firstName = "Admin" }) {
             <hr />
           </>
         )}
-
-        <Link
-          to="/admin_activity_log"
-          className="hover:bg-white hover:text-[#01165A] transition-all duration-200 text-sm py-7"
-        >
-          Activity Log
-        </Link>
         <hr />
         <Link
           to="/"

@@ -300,9 +300,9 @@ export default function SuperAdminPage() {
       <AdminSidebar role="superadmin" />
 
       {/* CONTENT */}
-      <div className="ml-82 mt-28 p-4">
+      <div className="ml-82 mt-12 p-4">
         <div className="flex justify-center mb-8">
-          <div className="flex gap-x-5 p-1 bg-gray-100 rounded-full shadow-inner">
+          <div className="flex gap-x-5 p-1 rounded-full">
             {filterOptions.map((filter) => (
               <button
                 key={filter}
@@ -364,7 +364,7 @@ export default function SuperAdminPage() {
                           : report.status === "Under Review"
                           ? "text-orange-700 bg-orange-100"
                           : report.status === "In Progress"
-                          ? "text-purple-700 bg-purple-100"
+                          ? "text-white bg-amber-400"
                           : report.status === "Resolved"
                           ? "text-green-700 bg-green-100"
                           : report.status === "Invalid"
@@ -440,7 +440,7 @@ export default function SuperAdminPage() {
                       : selectedReport.status === "Under Review"
                       ? "text-orange-700 bg-orange-100"
                       : selectedReport.status === "In Progress"
-                      ? "text-purple-700 bg-purple-100"
+                      ? "text-white bg-amber-400"
                       : selectedReport.status === "Resolved"
                       ? "text-green-700 bg-green-100"
                       : selectedReport.status === "Invalid"
@@ -461,19 +461,6 @@ export default function SuperAdminPage() {
                 selectedReport.actionHistory.length > 0 && (
                   <div className="my-4 p-4 bg-blue-50 rounded-md border border-blue-200">
                     <strong className="text-blue-800 flex items-center gap-2">
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
                       Action History:
                     </strong>
                     <div className="mt-3 space-y-2">
@@ -482,7 +469,6 @@ export default function SuperAdminPage() {
                           key={idx}
                           className="flex items-start gap-2 text-sm"
                         >
-                          <span className="text-blue-600 mt-1">✓</span>
                           <div className="flex-1">
                             <span className="font-medium text-gray-800">
                               {action.action}
@@ -620,14 +606,14 @@ export default function SuperAdminPage() {
 
               {/* Additional fields for "In Progress" status */}
               {selectedReport.status === "In Progress" && (
-                <div className="mt-4 p-3 bg-purple-50 rounded-md">
-                  <strong className="text-purple-800">
+                <div className="mt-4 p-3 bg-green-100 rounded-md">
+                  <strong className="text-green-900">
                     Resolution Details:
                   </strong>
                   <textarea
                     value={resolutionDetails}
                     onChange={(e) => setResolutionDetails(e.target.value)}
-                    className="w-full mt-2 p-2 border border-purple-200 rounded-md text-sm"
+                    className="w-full mt-2 p-2 border border-white rounded-md text-sm"
                     rows="4"
                     placeholder="Enter resolution details, actions taken, etc..."
                   />
@@ -699,7 +685,7 @@ export default function SuperAdminPage() {
                 <>
                   <button
                     onClick={handleMarkInProgress}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-md cursor-pointer hover:bg-purple-700"
+                    className="px-4 py-2 bg-purple-600 text-white rounded-md cursor-pointer hover:bg-amber-500"
                   >
                     Mark as In Progress
                   </button>

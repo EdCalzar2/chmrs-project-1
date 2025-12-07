@@ -40,10 +40,6 @@ export default function App() {
           path="/admin_report_analytics"
           element={<AdminReportAnalytics />}
         ></Route>
-        <Route
-          path="/admin_activity_log"
-          element={<AdminReportAnalytics />}
-        ></Route>
       </Routes>
     </BrowserRouter>
   );
