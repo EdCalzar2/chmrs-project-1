@@ -72,6 +72,26 @@ export default function ViewReports() {
 
   return (
     <>
+      {/* Fix Leaflet z-index issues */}
+      <style>{`
+        .leaflet-container {
+          z-index: 0 !important;
+        }
+        
+        .leaflet-pane {
+          z-index: 0 !important;
+        }
+        
+        .leaflet-top,
+        .leaflet-bottom {
+          z-index: 1 !important;
+        }
+        
+        .leaflet-control {
+          z-index: 1 !important;
+        }
+      `}</style>
+
       <Navbar />
       <div className="flex justify-center md:gap-x-2 mt-24 text-sm flex-wrap">
         {filters.map((filter) => (
@@ -114,9 +134,26 @@ export default function ViewReports() {
                   {report.severity}
                 </p>
               </div>
-              <p className="text-sm text-black mb-4">
-                <span className="font-semibold">Status:</span> {report.status}
-              </p>
+              <div className="flex items-baseline gap-x-2 mb-4">
+                <span className="text-sm font-semibold">Status:</span>
+                <div
+                  className={`text-sm px-2 py-0.5 rounded-full ${
+                    report.status === "Submitted"
+                      ? "text-blue-700 bg-blue-100"
+                      : report.status === "Under Review"
+                      ? "text-orange-700 bg-orange-100"
+                      : report.status === "In Progress"
+                      ? "text-purple-700 bg-purple-100"
+                      : report.status === "Resolved"
+                      ? "text-green-700 bg-green-100"
+                      : report.status === "Invalid"
+                      ? "text-red-700 bg-red-100"
+                      : "text-gray-700 bg-gray-100"
+                  }`}
+                >
+                  {report.status}
+                </div>
+              </div>
               <p className="text-black/60 mb-4">
                 {report.description && report.description.length > 100
                   ? report.description.substring(0, 60) + "..."
@@ -198,14 +235,14 @@ export default function ViewReports() {
                 selectedReport.location.lng && (
                   <div className="my-4">
                     <strong>Location:</strong>
-                    <div className="mt-2 h-[300px] border-2 border-gray-300 rounded-lg overflow-hidden">
+                    <div className="mt-2 h-[300px] border-2 border-gray-300 rounded-lg overflow-hidden relative z-0">
                       <MapContainer
                         center={[
                           selectedReport.location.lat,
                           selectedReport.location.lng,
                         ]}
                         zoom={17}
-                        style={{ height: "100%", width: "100%" }}
+                        style={{ height: "100%", width: "100%", position: "relative", zIndex: 0 }}
                         scrollWheelZoom={false}
                       >
                         <TileLayer
@@ -236,16 +273,41 @@ export default function ViewReports() {
                 </div>
               )}
 
+              {/* UPDATED PHOTOS SECTION - Display actual images */}
               <div>
                 <strong>Photos:</strong>
                 {selectedReport.photos && selectedReport.photos.length > 0 ? (
-                  <ul className="space-y-2">
-                    {selectedReport.photos.map((p, i) => (
-                      <li key={i} className="text-sm text-gray-700">
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    {selectedReport.photos.map((photo, i) => {
+                      // Handle both old format (string filenames) and new format (objects with base64 data)
+                      if (typeof photo === "string") {
+                        // Old format - just show filename
+                        return (
+                          <div
+                            key={i}
+                            className="text-sm text-gray-700 p-2 bg-gray-50 rounded"
+                          >
+                            {photo}
+                          </div>
+                        );
+                      } else if (photo.data) {
+                        // New format - show actual image
+                        return (
+                          <div key={i} className="relative group">
+                            <img
+                              src={photo.data}
+                              alt={photo.name}
+                              className="w-full h-40 object-cover rounded-lg border-2 border-gray-200"
+                            />
+                            <div className="mt-1 text-xs text-gray-500 truncate">
+                              {photo.name}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
                 ) : (
                   <div className="text-sm text-gray-500 mt-1">
                     No photos attached
@@ -291,9 +353,9 @@ export default function ViewReports() {
               {selectedReport.status === "Under Review" && (
                 <div className="mt-4 p-3 bg-orange-50 rounded-md">
                   <div>
-                    <strong className="text-orange-800">Assign To:</strong>
+                    <strong className="text-orange-800">Assigned To:</strong>
                     <div className="text-sm text-gray-700 mt-1">
-                      {selectedReport.assignedTo || "Pending..."}
+                      {selectedReport.assignedTo || "Pending assignment..."}
                     </div>
                   </div>
                 </div>
