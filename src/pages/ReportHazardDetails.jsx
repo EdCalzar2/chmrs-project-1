@@ -24,6 +24,26 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
+const convertFilesToBase64 = async (files) => {
+  const base64Files = await Promise.all(
+    files.map((file) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          resolve({
+            name: file.name,
+            data: reader.result, // This is the base64 string
+            type: file.type,
+          });
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    })
+  );
+  return base64Files;
+};
+
 export default function ReportHazardDetails() {
   const location = useLocation();
   const { hazard } = location.state || {};
@@ -99,7 +119,7 @@ export default function ReportHazardDetails() {
   };
 
   // When user confirms in the modal, perform persistence and show success modal
-  const performSubmit = () => {
+  const performSubmit = async () => {
     // Get current logged-in user info
     const currentUserId = localStorage.getItem("currentUserId");
     const currentUserName = localStorage.getItem("currentUserName");
@@ -111,15 +131,18 @@ export default function ReportHazardDetails() {
       return;
     }
 
+    // Convert files to base64 before saving
+    const photoData = await convertFilesToBase64(files);
+
     const reportData = {
-      id: Date.now().toString(), // Add unique report ID
-      userId: currentUserId, // Link report to user
+      id: Date.now().toString(),
+      userId: currentUserId,
       userName: currentUserName,
       userEmail: currentUserEmail,
       hazard,
       description,
       severity: activeSeverity,
-      photos: files.map((f) => f.name),
+      photos: photoData, // Now storing actual photo data instead of just names
       location: locationPin,
       status: "Submitted",
       date: new Date().toISOString(),
@@ -135,6 +158,7 @@ export default function ReportHazardDetails() {
       localStorage.setItem(key, JSON.stringify(existing));
     } catch (e) {
       console.error("Failed to persist report", e);
+      alert("Failed to save report. The photos might be too large.");
     }
 
     setShowConfirmModal(false);
@@ -170,12 +194,17 @@ export default function ReportHazardDetails() {
             <p className="text-sm text-muted-foreground mt-1">
               Click the marker icon in the top right to place a pin on the map
             </p>
-            <div className="mt-3 h-[400px] border-2 border-black/50 rounded-2xl overflow-hidden">
+            <div className="mt-3 h-[400px] border-2 border-black/50 rounded-2xl overflow-hidden relative z-0">
               <MapContainer
                 center={center}
                 zoom={ZOOM_LEVEL}
                 ref={mapRef}
-                style={{ height: "100%", width: "100%" }}
+                style={{
+                  height: "100%",
+                  width: "100%",
+                  position: "relative",
+                  zIndex: 0,
+                }}
               >
                 <FeatureGroup ref={featureGroupRef}>
                   <EditControl

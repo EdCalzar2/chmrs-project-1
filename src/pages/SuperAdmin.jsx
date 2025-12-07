@@ -451,11 +451,9 @@ export default function SuperAdminPage() {
                   {selectedReport.status || "Submitted"}
                 </div>
               </div>
-
               <p className="text-sm text-gray-600 my-3">
                 {selectedReport.description}
               </p>
-
               {/* ACTION HISTORY SECTION */}
               {selectedReport.actionHistory &&
                 selectedReport.actionHistory.length > 0 && (
@@ -492,7 +490,6 @@ export default function SuperAdminPage() {
                     </div>
                   </div>
                 )}
-
               {/* Map Display */}
               {selectedReport.location &&
                 selectedReport.location.lat &&
@@ -527,7 +524,6 @@ export default function SuperAdminPage() {
                     </p>
                   </div>
                 )}
-
               {!selectedReport.location && (
                 <div className="my-2">
                   <strong>Location:</strong>
@@ -536,24 +532,47 @@ export default function SuperAdminPage() {
                   </div>
                 </div>
               )}
-
               <div>
                 <strong>Photos:</strong>
                 {selectedReport.photos && selectedReport.photos.length > 0 ? (
-                  <ul className="space-y-2">
-                    {selectedReport.photos.map((p, i) => (
-                      <li key={i} className="text-sm text-gray-700">
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    {selectedReport.photos.map((photo, i) => {
+                      // Handle both old format (string filenames) and new format (objects with base64 data)
+                      if (typeof photo === "string") {
+                        // Old format - just show filename
+                        return (
+                          <div
+                            key={i}
+                            className="text-sm text-gray-700 p-2 bg-gray-50 rounded"
+                          >
+                            {photo}
+                          </div>
+                        );
+                      } else if (photo.data) {
+                        // New format - show actual image
+                        return (
+                          <div key={i} className="relative group">
+                            <img
+                              src={photo.data}
+                              alt={photo.name}
+                              className="w-full h-40 object-cover rounded-lg border-2"
+                              onClick={() => window.open(photo.data, "_blank")}
+                            />
+                            <div className="mt-1 text-xs text-gray-500 truncate">
+                              {photo.name}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
                 ) : (
                   <div className="text-sm text-gray-500 mt-1">
                     No photos attached
                   </div>
                 )}
               </div>
-
               <div className="mt-2">
                 <strong>Date:</strong>
                 <div className="text-sm text-gray-700">
@@ -562,7 +581,6 @@ export default function SuperAdminPage() {
                     : "N/A"}
                 </div>
               </div>
-
               {/* Show assigned worker and in progress date for In Progress and Resolved statuses */}
               {(selectedReport.status === "In Progress" ||
                 selectedReport.status === "Resolved") && (
@@ -587,7 +605,6 @@ export default function SuperAdminPage() {
                   )}
                 </>
               )}
-
               {/* Additional fields for "Under Review" status */}
               {selectedReport.status === "Under Review" && (
                 <div className="mt-4 p-3 bg-orange-50 rounded-md">
@@ -603,7 +620,6 @@ export default function SuperAdminPage() {
                   </div>
                 </div>
               )}
-
               {/* Additional fields for "In Progress" status */}
               {selectedReport.status === "In Progress" && (
                 <div className="mt-4 p-3 bg-green-100 rounded-md">
@@ -619,7 +635,6 @@ export default function SuperAdminPage() {
                   />
                 </div>
               )}
-
               {/* Additional fields for "Resolved" status */}
               {selectedReport.status === "Resolved" && (
                 <div className="mt-4 p-3 bg-green-50 rounded-md">
@@ -639,7 +654,6 @@ export default function SuperAdminPage() {
                   </div>
                 </div>
               )}
-
               {/* Additional fields for "Invalid" status */}
               {selectedReport.status === "Invalid" && (
                 <div className="mt-4 p-3 bg-red-50 rounded-md">
@@ -685,7 +699,7 @@ export default function SuperAdminPage() {
                 <>
                   <button
                     onClick={handleMarkInProgress}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-md cursor-pointer hover:bg-amber-500"
+                    className="px-4 py-2 bg-amber-400 text-white rounded-md cursor-pointer hover:bg-amber-500"
                   >
                     Mark as In Progress
                   </button>

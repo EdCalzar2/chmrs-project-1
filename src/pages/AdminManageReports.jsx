@@ -543,13 +543,37 @@ export default function AdminManageReports() {
               <div>
                 <strong>Photos:</strong>
                 {selectedReport.photos && selectedReport.photos.length > 0 ? (
-                  <ul className="space-y-2">
-                    {selectedReport.photos.map((p, i) => (
-                      <li key={i} className="text-sm text-gray-700">
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    {selectedReport.photos.map((photo, i) => {
+                      // Handle both old format (string filenames) and new format (objects with base64 data)
+                      if (typeof photo === "string") {
+                        // Old format - just show filename
+                        return (
+                          <div
+                            key={i}
+                            className="text-sm text-gray-700 p-2 bg-gray-50 rounded"
+                          >
+                            {photo}
+                          </div>
+                        );
+                      } else if (photo.data) {
+                        // New format - show actual image
+                        return (
+                          <div key={i} className="relative group">
+                            <img
+                              src={photo.data}
+                              alt={photo.name}
+                              className="w-full h-40 object-cover rounded-lg border-2 border-gray-200"
+                            />
+                            <div className="mt-1 text-xs text-gray-500 truncate">
+                              {photo.name}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
                 ) : (
                   <div className="text-sm text-gray-500 mt-1">
                     No photos attached
