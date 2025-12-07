@@ -7,6 +7,12 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showRoleSignupModal, setShowRoleSignupModal] = useState(false);
+
+  // Alert modal states
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertTitle, setAlertTitle] = useState("");
 
   const handleEmail = (e) => {
     setEmail(e.target.value);
@@ -14,6 +20,13 @@ export default function Login() {
 
   const handlePassword = (e) => {
     setPassword(e.target.value);
+  };
+
+  // Function to show alert modal
+  const showAlert = (title, message) => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setShowAlertModal(true);
   };
 
   const handleLogin = (e) => {
@@ -38,6 +51,7 @@ export default function Login() {
     if (adminUser) {
       localStorage.setItem("userRole", "admin");
       localStorage.setItem("currentAdminId", adminUser.id);
+      localStorage.setItem("currentAdminFirstName", adminUser.firstName);
       localStorage.setItem(
         "currentAdminName",
         `${adminUser.firstName} ${adminUser.lastName}`
@@ -57,11 +71,13 @@ export default function Login() {
 
     if (pendingUser) {
       if (pendingUser.status === "pending") {
-        alert(
+        showAlert(
+          "Pending Approval",
           "Your admin registration is pending approval. Please wait for super admin verification."
         );
       } else if (pendingUser.status === "rejected") {
-        alert(
+        showAlert(
+          "Registration Rejected",
           `Your admin registration was rejected. Reason: ${
             pendingUser.rejectReason || "Not specified"
           }`
@@ -92,12 +108,11 @@ export default function Login() {
     }
 
     // Invalid credentials
-    alert(
+    showAlert(
+      "Invalid Credentials",
       "Invalid email or password. Please check your credentials or sign up for an account."
     );
   };
-
-  const [showRoleSignupModal, setShowRoleSignupModal] = useState(false);
 
   return (
     <>
@@ -179,6 +194,26 @@ export default function Login() {
               <p className="text-xs text-gray-500 mt-4">
                 Note: Admin accounts require super admin approval
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Alert Modal */}
+        {showAlertModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-lg p-6 w-11/12 max-w-md shadow-xl">
+              <h3 className="text-lg font-bold text-[#01165A] mb-3">
+                {alertTitle}
+              </h3>
+              <p className="text-sm text-gray-700 mb-6">{alertMessage}</p>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowAlertModal(false)}
+                  className="bg-[#01165A] text-white px-6 py-2 rounded-md hover:bg-[#001a6d] transition cursor-pointer"
+                >
+                  OK
+                </button>
+              </div>
             </div>
           </div>
         )}

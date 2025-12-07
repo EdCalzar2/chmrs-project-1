@@ -16,7 +16,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-export default function SuperAdmin() {
+export default function SuperAdminPage() {
   const location = useLocation();
   const reportsFromState = location.state?.reports;
 
@@ -28,13 +28,54 @@ export default function SuperAdmin() {
   const [showInvalidModal, setShowInvalidModal] = useState(false);
   const [invalidReason, setInvalidReason] = useState("");
 
+  const [activeFilter, setActiveFilter] = useState("All");
+
+  // Function to generate random report ID
+  const generateReportId = () => {
+    return Math.floor(100000 + Math.random() * 900000);
+  };
+
+  // Helper function to add action to history
+  const addActionToHistory = (report, actionType, additionalInfo = {}) => {
+    // Super Admin is always "Super Admin"
+    const currentAdminName = "Super Admin";
+    const actionHistory = report.actionHistory || [];
+
+    const newAction = {
+      action: actionType,
+      by: currentAdminName,
+      date: new Date().toISOString(),
+      ...additionalInfo,
+    };
+
+    return [...actionHistory, newAction];
+  };
+
   const [reports, setReports] = useState(() => {
     try {
       const raw = localStorage.getItem("chmrs_reports");
-      const persisted = raw ? JSON.parse(raw) : [];
-      return reportsFromState && reportsFromState.length > 0
-        ? reportsFromState
-        : persisted;
+      let persisted = raw ? JSON.parse(raw) : [];
+
+      persisted = persisted.map((report) => ({
+        ...report,
+        reportId: report.reportId || generateReportId(),
+        actionHistory: report.actionHistory || [],
+      }));
+
+      const finalReports =
+        reportsFromState && reportsFromState.length > 0
+          ? reportsFromState.map((report) => ({
+              ...report,
+              reportId: report.reportId || generateReportId(),
+              actionHistory: report.actionHistory || [],
+            }))
+          : persisted;
+
+      return finalReports.sort((a, b) => {
+        const dateA = new Date(a.date || 0);
+        const dateB = new Date(b.date || 0);
+        return dateB - dateA;
+      });
     } catch (e) {
       console.error("Failed to load persisted reports", e);
       return reportsFromState || [];
@@ -58,7 +99,13 @@ export default function SuperAdmin() {
     if (selectedIndex !== null) {
       setReports((prev) =>
         prev.map((report, i) =>
-          i === selectedIndex ? { ...report, status: "Under Review" } : report
+          i === selectedIndex
+            ? {
+                ...report,
+                status: "Under Review",
+                actionHistory: addActionToHistory(report, "Accepted"),
+              }
+            : report
         )
       );
       setShowModal(false);
@@ -83,6 +130,13 @@ export default function SuperAdmin() {
                 status: "In Progress",
                 assignedTo: assignedTo.trim(),
                 inProgressDate: new Date().toISOString(),
+                actionHistory: addActionToHistory(
+                  report,
+                  "Marked as In Progress",
+                  {
+                    assignedTo: assignedTo.trim(),
+                  }
+                ),
               }
             : report
         )
@@ -108,6 +162,9 @@ export default function SuperAdmin() {
                 status: "Resolved",
                 resolutionDetails: resolutionDetails.trim(),
                 resolvedDate: new Date().toISOString(),
+                actionHistory: addActionToHistory(report, "Resolved", {
+                  resolutionDetails: resolutionDetails.trim(),
+                }),
               }
             : report
         )
@@ -119,14 +176,11 @@ export default function SuperAdmin() {
     }
   };
 
-  // open the invalid-reason input modal
   const handleMarkInvalid = () => {
-    // show the input modal so admin can enter a reason
     setInvalidReason(selectedReport?.invalidReason || "");
     setShowInvalidModal(true);
   };
 
-  // actually mark the selected report as invalid and persist reason/date
   const confirmMarkInvalid = () => {
     if (selectedIndex === null) return;
     if (!invalidReason.trim()) {
@@ -142,12 +196,14 @@ export default function SuperAdmin() {
               status: "Invalid",
               invalidReason: invalidReason.trim(),
               invalidDate: new Date().toISOString(),
+              actionHistory: addActionToHistory(report, "Marked as Invalid", {
+                reason: invalidReason.trim(),
+              }),
             }
           : report
       )
     );
 
-    // close both modals and reset selection
     setShowInvalidModal(false);
     setShowModal(false);
     setSelectedReport(null);
@@ -168,9 +224,9 @@ export default function SuperAdmin() {
             ? {
                 ...report,
                 status: "Under Review",
-                // clear invalid markers when reopening
                 invalidReason: undefined,
                 invalidDate: undefined,
+                actionHistory: addActionToHistory(report, "Reopened"),
               }
             : report
         )
@@ -201,96 +257,156 @@ export default function SuperAdmin() {
     setShowInvalidModal(false);
   };
 
+  const handleFilterChange = (filter) => {
+    setActiveFilter(filter);
+  };
+
+  const filteredReports = reports.filter((report) => {
+    if (activeFilter === "All") return true;
+    return (report.status || "Submitted") === activeFilter;
+  });
+
+  const filterOptions = [
+    "All",
+    "Submitted",
+    "Under Review",
+    "In Progress",
+    "Resolved",
+    "Invalid",
+  ];
+
+  const getFilterColorClasses = (filter) => {
+    switch (filter) {
+      case "All":
+        return "bg-[#01165A] text-white hover:bg-[#001d79]";
+      case "Submitted":
+        return "bg-[#01165A] text-white hover:bg-[#001d79]";
+      case "Under Review":
+        return "bg-[#01165A] text-white hover:bg-[#001d79]";
+      case "In Progress":
+        return "bg-[#01165A] text-white hover:bg-[#001d79]";
+      case "Resolved":
+        return "bg-[#01165A] text-white hover:bg-[#001d79]";
+      case "Invalid":
+        return "bg-[#01165A] text-white hover:bg-[#001d79]";
+      default:
+        return "bg-[#01165A] text-white hover:bg-[#001d79]";
+    }
+  };
+
   return (
     <>
       {/* SIDEBAR */}
       <AdminSidebar role="superadmin" />
 
       {/* CONTENT */}
-      <div className="ml-82 mt-28 p-4">
-        <div className="grid grid-cols-1 gap-y-6">
-          {reports.length === 0 && (
-            <p className="text-gray-500 text-center mt-10">
-              No reports submitted yet.
-            </p>
-          )}
+      <div className="ml-82 mt-12 p-4">
+        <div className="flex justify-center mb-8">
+          <div className="flex gap-x-5 p-1 rounded-full">
+            {filterOptions.map((filter) => (
+              <button
+                key={filter}
+                onClick={() => handleFilterChange(filter)}
+                className={`text-sm px-6 font-bold py-4 rounded-full transition duration-150 ease-in-out ${
+                  activeFilter === filter
+                    ? "bg-white text-[#01165A] shadow-md"
+                    : getFilterColorClasses(filter)
+                }`}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+        </div>
 
-          {reports.map((report, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-2xl p-6 shadow-[0px_5px_5px_rgba(0,0,0,0.25)] hover:shadow-[0px_10px_15px_rgba(0,0,0,0.25)] transition ml-16 w-250"
-            >
-              <div className="flex items-baseline gap-x-3">
-                <h1 className="font-bold uppercase">{report.hazard}</h1>
+        {/* Centered container for reports */}
+        <div className="max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 gap-y-6">
+            {filteredReports.length === 0 && (
+              <p className="text-gray-500 text-center mt-10">
+                No reports found for the status: {activeFilter}
+              </p>
+            )}
 
-                <h1
-                  className={
-                    `px-3 rounded-full text-white ` +
-                    (report.severity === "Minor"
-                      ? "bg-yellow-500 border-yellow-600"
-                      : report.severity === "Moderate"
-                      ? "bg-orange-500 border-orange-600"
-                      : "bg-red-500 border-red-600")
-                  }
-                >
-                  {report.severity}
+            {filteredReports.map((report, index) => (
+              <div
+                key={report.reportId}
+                className="bg-white rounded-2xl p-6 shadow-[0px_5px_5px_rgba(0,0,0,0.25)] hover:shadow-[0px_10px_15px_rgba(0,0,0,0.25)] transition"
+              >
+                <div className="flex items-baseline gap-x-3">
+                  <h1 className="font-bold uppercase">{report.hazard}</h1>
+
+                  <h1
+                    className={
+                      `px-3 rounded-full text-white ` +
+                      (report.severity === "Minor"
+                        ? "bg-yellow-500 border-yellow-600"
+                        : report.severity === "Moderate"
+                        ? "bg-orange-500 border-orange-600"
+                        : "bg-red-500 border-red-600")
+                    }
+                  >
+                    {report.severity}
+                  </h1>
+
+                  <h1 className="text-black/50">
+                    Report ID: {report.reportId}
+                  </h1>
+                </div>
+
+                {report.status && (
+                  <div className="flex items-center mt-2 mb-4">
+                    <span className="text-black mr-1 font-bold">Status:</span>
+                    <span
+                      className={`px-2 rounded-full font-medium ${
+                        (report.status || "Submitted") === "Submitted"
+                          ? "text-blue-700 bg-blue-100"
+                          : report.status === "Under Review"
+                          ? "text-orange-700 bg-orange-100"
+                          : report.status === "In Progress"
+                          ? "text-white bg-amber-400"
+                          : report.status === "Resolved"
+                          ? "text-green-700 bg-green-100"
+                          : report.status === "Invalid"
+                          ? "text-red-700 bg-red-100"
+                          : "text-gray-600 bg-gray-100"
+                      }`}
+                    >
+                      {report.status || "Submitted"}
+                    </span>
+                  </div>
+                )}
+
+                <p className="text-black/60 mb-4">
+                  {report.description && report.description.length > 100
+                    ? report.description.substring(0, 60) + "..."
+                    : report.description}
+                </p>
+                <h1 className="text-sm text-black/50">
+                  Date:{" "}
+                  {report.date
+                    ? new Date(report.date).toLocaleString()
+                    : new Date().toLocaleDateString()}
                 </h1>
 
-                <h1 className="text-black/50">Report ID: {index + 1}</h1>
-              </div>
-
-              {report.status && (
-                <div className="flex items-center mt-2 mb-4">
-                  <span className="text-black mr-1 font-bold">Status:</span>
-                  <span
-                    className={`px-2 rounded-full font-medium ${
-                      report.status === "Submitted"
-                        ? "text-blue-700 bg-blue-100"
-                        : report.status === "Under Review"
-                        ? "text-orange-700 bg-orange-100"
-                        : report.status === "In Progress"
-                        ? "text-purple-700 bg-purple-100"
-                        : report.status === "Resolved"
-                        ? "text-green-700 bg-green-100"
-                        : report.status === "Invalid"
-                        ? "text-red-700 bg-red-100"
-                        : "text-gray-600 bg-gray-100"
-                    }`}
+                <div className="flex gap-2 items-center mt-2">
+                  <button
+                    onClick={() => openModal(report, index)}
+                    className="text-sm text-blue-700 rounded-md cursor-pointer hover:underline"
                   >
-                    {report.status}
-                  </span>
+                    See more
+                  </button>
+
+                  <button
+                    onClick={() => handleDelete(index)}
+                    className="text-sm text-red-600 hover:text-red-800 bg-red-50 px-3 py-1 rounded-md"
+                  >
+                    Delete
+                  </button>
                 </div>
-              )}
-
-              <p className="text-black/60 mb-4">
-                {report.description && report.description.length > 100
-                  ? report.description.substring(0, 60) + "..."
-                  : report.description}
-              </p>
-              <h1 className="text-sm text-black/50">
-                Date:{" "}
-                {report.date
-                  ? new Date(report.date).toLocaleString()
-                  : new Date().toLocaleDateString()}
-              </h1>
-
-              <div className="flex gap-2 items-center mt-2">
-                <button
-                  onClick={() => openModal(report, index)}
-                  className="text-sm text-blue-700 rounded-md cursor-pointer hover:underline"
-                >
-                  See more
-                </button>
-
-                <button
-                  onClick={() => handleDelete(index)}
-                  className="text-sm text-red-600 hover:text-red-800 bg-red-50 px-3 py-1 rounded-md"
-                >
-                  Delete
-                </button>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -319,12 +435,12 @@ export default function SuperAdmin() {
                 <strong>Status:</strong>
                 <div
                   className={`ml-1 text-sm px-2 rounded-full ${
-                    selectedReport.status === "Submitted"
+                    (selectedReport.status || "Submitted") === "Submitted"
                       ? "text-blue-700 bg-blue-100"
                       : selectedReport.status === "Under Review"
                       ? "text-orange-700 bg-orange-100"
                       : selectedReport.status === "In Progress"
-                      ? "text-purple-700 bg-purple-100"
+                      ? "text-white bg-amber-400"
                       : selectedReport.status === "Resolved"
                       ? "text-green-700 bg-green-100"
                       : selectedReport.status === "Invalid"
@@ -332,14 +448,48 @@ export default function SuperAdmin() {
                       : "text-gray-700"
                   }`}
                 >
-                  {selectedReport.status || "N/A"}
+                  {selectedReport.status || "Submitted"}
                 </div>
               </div>
-
               <p className="text-sm text-gray-600 my-3">
                 {selectedReport.description}
               </p>
-
+              {/* ACTION HISTORY SECTION */}
+              {selectedReport.actionHistory &&
+                selectedReport.actionHistory.length > 0 && (
+                  <div className="my-4 p-4 bg-blue-50 rounded-md border border-blue-200">
+                    <strong className="text-blue-800 flex items-center gap-2">
+                      Action History:
+                    </strong>
+                    <div className="mt-3 space-y-2">
+                      {selectedReport.actionHistory.map((action, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-start gap-2 text-sm"
+                        >
+                          <div className="flex-1">
+                            <span className="font-medium text-gray-800">
+                              {action.action}
+                            </span>
+                            <span className="text-gray-600"> by </span>
+                            <span className="font-medium text-blue-700">
+                              {action.by}
+                            </span>
+                            {action.assignedTo && (
+                              <span className="text-gray-600">
+                                {" "}
+                                (Assigned to: {action.assignedTo})
+                              </span>
+                            )}
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {new Date(action.date).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               {/* Map Display */}
               {selectedReport.location &&
                 selectedReport.location.lat &&
@@ -374,7 +524,6 @@ export default function SuperAdmin() {
                     </p>
                   </div>
                 )}
-
               {!selectedReport.location && (
                 <div className="my-2">
                   <strong>Location:</strong>
@@ -383,24 +532,47 @@ export default function SuperAdmin() {
                   </div>
                 </div>
               )}
-
               <div>
                 <strong>Photos:</strong>
                 {selectedReport.photos && selectedReport.photos.length > 0 ? (
-                  <ul className="space-y-2">
-                    {selectedReport.photos.map((p, i) => (
-                      <li key={i} className="text-sm text-gray-700">
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    {selectedReport.photos.map((photo, i) => {
+                      // Handle both old format (string filenames) and new format (objects with base64 data)
+                      if (typeof photo === "string") {
+                        // Old format - just show filename
+                        return (
+                          <div
+                            key={i}
+                            className="text-sm text-gray-700 p-2 bg-gray-50 rounded"
+                          >
+                            {photo}
+                          </div>
+                        );
+                      } else if (photo.data) {
+                        // New format - show actual image
+                        return (
+                          <div key={i} className="relative group">
+                            <img
+                              src={photo.data}
+                              alt={photo.name}
+                              className="w-full h-40 object-cover rounded-lg border-2"
+                              onClick={() => window.open(photo.data, "_blank")}
+                            />
+                            <div className="mt-1 text-xs text-gray-500 truncate">
+                              {photo.name}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
                 ) : (
                   <div className="text-sm text-gray-500 mt-1">
                     No photos attached
                   </div>
                 )}
               </div>
-
               <div className="mt-2">
                 <strong>Date:</strong>
                 <div className="text-sm text-gray-700">
@@ -409,7 +581,6 @@ export default function SuperAdmin() {
                     : "N/A"}
                 </div>
               </div>
-
               {/* Show assigned worker and in progress date for In Progress and Resolved statuses */}
               {(selectedReport.status === "In Progress" ||
                 selectedReport.status === "Resolved") && (
@@ -434,7 +605,6 @@ export default function SuperAdmin() {
                   )}
                 </>
               )}
-
               {/* Additional fields for "Under Review" status */}
               {selectedReport.status === "Under Review" && (
                 <div className="mt-4 p-3 bg-orange-50 rounded-md">
@@ -450,23 +620,21 @@ export default function SuperAdmin() {
                   </div>
                 </div>
               )}
-
               {/* Additional fields for "In Progress" status */}
               {selectedReport.status === "In Progress" && (
-                <div className="mt-4 p-3 bg-purple-50 rounded-md">
-                  <strong className="text-purple-800">
+                <div className="mt-4 p-3 bg-green-100 rounded-md">
+                  <strong className="text-green-900">
                     Resolution Details:
                   </strong>
                   <textarea
                     value={resolutionDetails}
                     onChange={(e) => setResolutionDetails(e.target.value)}
-                    className="w-full mt-2 p-2 border border-purple-200 rounded-md text-sm"
+                    className="w-full mt-2 p-2 border border-white rounded-md text-sm"
                     rows="4"
                     placeholder="Enter resolution details, actions taken, etc..."
                   />
                 </div>
               )}
-
               {/* Additional fields for "Resolved" status */}
               {selectedReport.status === "Resolved" && (
                 <div className="mt-4 p-3 bg-green-50 rounded-md">
@@ -486,7 +654,6 @@ export default function SuperAdmin() {
                   </div>
                 </div>
               )}
-
               {/* Additional fields for "Invalid" status */}
               {selectedReport.status === "Invalid" && (
                 <div className="mt-4 p-3 bg-red-50 rounded-md">
@@ -532,7 +699,7 @@ export default function SuperAdmin() {
                 <>
                   <button
                     onClick={handleMarkInProgress}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-md cursor-pointer hover:bg-purple-700"
+                    className="px-4 py-2 bg-amber-400 text-white rounded-md cursor-pointer hover:bg-amber-500"
                   >
                     Mark as In Progress
                   </button>
@@ -591,7 +758,7 @@ export default function SuperAdmin() {
         </div>
       )}
 
-      {/* Invalid-reason modal (opened when admin wants to mark invalid) */}
+      {/* Invalid-reason modal */}
       {showInvalidModal && selectedReport && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg p-6 w-11/12 max-w-lg max-h-[80vh] overflow-y-auto">
