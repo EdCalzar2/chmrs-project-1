@@ -32,7 +32,23 @@ export default function SuperAdminPage() {
 
   // Function to generate random report ID
   const generateReportId = () => {
-    return Math.floor(100000 + Math.random() * 900000); // 6-digit random number
+    return Math.floor(100000 + Math.random() * 900000);
+  };
+
+  // Helper function to add action to history
+  const addActionToHistory = (report, actionType, additionalInfo = {}) => {
+    // Super Admin is always "Super Admin"
+    const currentAdminName = "Super Admin";
+    const actionHistory = report.actionHistory || [];
+
+    const newAction = {
+      action: actionType,
+      by: currentAdminName,
+      date: new Date().toISOString(),
+      ...additionalInfo,
+    };
+
+    return [...actionHistory, newAction];
   };
 
   const [reports, setReports] = useState(() => {
@@ -40,10 +56,10 @@ export default function SuperAdminPage() {
       const raw = localStorage.getItem("chmrs_reports");
       let persisted = raw ? JSON.parse(raw) : [];
 
-      // Assign random IDs to reports that don't have one
       persisted = persisted.map((report) => ({
         ...report,
         reportId: report.reportId || generateReportId(),
+        actionHistory: report.actionHistory || [],
       }));
 
       const finalReports =
@@ -51,10 +67,10 @@ export default function SuperAdminPage() {
           ? reportsFromState.map((report) => ({
               ...report,
               reportId: report.reportId || generateReportId(),
+              actionHistory: report.actionHistory || [],
             }))
           : persisted;
 
-      // Sort by date (newest first)
       return finalReports.sort((a, b) => {
         const dateA = new Date(a.date || 0);
         const dateB = new Date(b.date || 0);
@@ -83,7 +99,13 @@ export default function SuperAdminPage() {
     if (selectedIndex !== null) {
       setReports((prev) =>
         prev.map((report, i) =>
-          i === selectedIndex ? { ...report, status: "Under Review" } : report
+          i === selectedIndex
+            ? {
+                ...report,
+                status: "Under Review",
+                actionHistory: addActionToHistory(report, "Accepted"),
+              }
+            : report
         )
       );
       setShowModal(false);
@@ -108,6 +130,13 @@ export default function SuperAdminPage() {
                 status: "In Progress",
                 assignedTo: assignedTo.trim(),
                 inProgressDate: new Date().toISOString(),
+                actionHistory: addActionToHistory(
+                  report,
+                  "Marked as In Progress",
+                  {
+                    assignedTo: assignedTo.trim(),
+                  }
+                ),
               }
             : report
         )
@@ -133,6 +162,9 @@ export default function SuperAdminPage() {
                 status: "Resolved",
                 resolutionDetails: resolutionDetails.trim(),
                 resolvedDate: new Date().toISOString(),
+                actionHistory: addActionToHistory(report, "Resolved", {
+                  resolutionDetails: resolutionDetails.trim(),
+                }),
               }
             : report
         )
@@ -164,6 +196,9 @@ export default function SuperAdminPage() {
               status: "Invalid",
               invalidReason: invalidReason.trim(),
               invalidDate: new Date().toISOString(),
+              actionHistory: addActionToHistory(report, "Marked as Invalid", {
+                reason: invalidReason.trim(),
+              }),
             }
           : report
       )
@@ -191,6 +226,7 @@ export default function SuperAdminPage() {
                 status: "Under Review",
                 invalidReason: undefined,
                 invalidDate: undefined,
+                actionHistory: addActionToHistory(report, "Reopened"),
               }
             : report
         )
@@ -419,6 +455,57 @@ export default function SuperAdminPage() {
               <p className="text-sm text-gray-600 my-3">
                 {selectedReport.description}
               </p>
+
+              {/* ACTION HISTORY SECTION */}
+              {selectedReport.actionHistory &&
+                selectedReport.actionHistory.length > 0 && (
+                  <div className="my-4 p-4 bg-blue-50 rounded-md border border-blue-200">
+                    <strong className="text-blue-800 flex items-center gap-2">
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      Action History:
+                    </strong>
+                    <div className="mt-3 space-y-2">
+                      {selectedReport.actionHistory.map((action, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-start gap-2 text-sm"
+                        >
+                          <span className="text-blue-600 mt-1">✓</span>
+                          <div className="flex-1">
+                            <span className="font-medium text-gray-800">
+                              {action.action}
+                            </span>
+                            <span className="text-gray-600"> by </span>
+                            <span className="font-medium text-blue-700">
+                              {action.by}
+                            </span>
+                            {action.assignedTo && (
+                              <span className="text-gray-600">
+                                {" "}
+                                (Assigned to: {action.assignedTo})
+                              </span>
+                            )}
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {new Date(action.date).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
               {/* Map Display */}
               {selectedReport.location &&
@@ -671,7 +758,7 @@ export default function SuperAdminPage() {
         </div>
       )}
 
-      {/* Invalid-reason modal (opened when admin wants to mark invalid) */}
+      {/* Invalid-reason modal */}
       {showInvalidModal && selectedReport && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg p-6 w-11/12 max-w-lg max-h-[80vh] overflow-y-auto">
