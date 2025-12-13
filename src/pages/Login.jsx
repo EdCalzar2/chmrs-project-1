@@ -33,7 +33,7 @@ export default function Login() {
     e.preventDefault();
 
     // Super Admin login
-    if (email === "superadmin" && password === "123456") {
+    if (email === "superadmin" && password === "qweasd") {
       localStorage.setItem("userRole", "superadmin");
       navigate("/super_admin_page");
       return;
