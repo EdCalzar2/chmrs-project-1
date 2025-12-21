@@ -259,7 +259,13 @@ export default function ReportHazardDetails() {
 
             <button
               onClick={() => setShowConfirmModal(true)}
-              disabled={!termsChecked}
+              disabled={
+                !termsChecked ||
+                !locationPin ||
+                !activeSeverity ||
+                files.length === 0 ||
+                !description.trim()
+              }
               className="bg-[#00BC3A] hover:bg-[#009730] transition-all duration-300 ease-in-out py-2 px-18 rounded-full text-white cursor-pointer mb-28 shadow-[0px_2px_5px_rgba(0,0,0,0.25)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Submit
