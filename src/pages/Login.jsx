@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "../assets/logo.png";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -9,10 +9,23 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showRoleSignupModal, setShowRoleSignupModal] = useState(false);
 
+
   // Alert modal states
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [alertTitle, setAlertTitle] = useState("");
+
+  useEffect(() => {
+    // Initialize super admin credentials if not already set
+    const superAdminCreds = localStorage.getItem("super_admin_credentials");
+    if (!superAdminCreds) {
+      const defaultCreds = {
+        email: import.meta.env.VITE_SUPERADMIN_EMAIL,
+        password: import.meta.env.VITE_SUPERADMIN_PASSWORD
+      };
+      localStorage.setItem("super_admin_credentials", JSON.stringify(defaultCreds));
+    }
+  }, []);
 
   const handleEmail = (e) => {
     setEmail(e.target.value);
