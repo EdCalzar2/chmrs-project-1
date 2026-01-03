@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import osm from "../utils/osm-providers.js";
@@ -9,6 +9,7 @@ import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 import AdminSidebar from "@/components/AdminSidebar.jsx";
 
+// Fix for Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconUrl: markerIcon,
@@ -20,38 +21,41 @@ export default function SuperAdminPage() {
   const location = useLocation();
   const reportsFromState = location.state?.reports;
 
+  // --- UI States ---
   const [showModal, setShowModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [assignedTo, setAssignedTo] = useState("");
-  const [customDepartment, setCustomDepartment] = useState(""); // ADD THIS LINE
+  const [customDepartment, setCustomDepartment] = useState("");
   const [resolutionDetails, setResolutionDetails] = useState("");
   const [showInvalidModal, setShowInvalidModal] = useState(false);
   const [invalidReason, setInvalidReason] = useState("");
 
+  // --- NEW: Filter States ---
   const [activeFilter, setActiveFilter] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateFilter, setDateFilter] = useState("All Time");
 
-  // Function to generate random report ID
-  const generateReportId = () => {
-    return Math.floor(100000 + Math.random() * 900000);
-  };
+  // --- Helpers ---
+  const generateReportId = () => Math.floor(100000 + Math.random() * 900000);
 
-  // Helper function to add action to history
   const addActionToHistory = (report, actionType, additionalInfo = {}) => {
     // Super Admin is always "Super Admin"
     const currentAdminName = "Super Admin";
     const actionHistory = report.actionHistory || [];
 
-    const newAction = {
-      action: actionType,
-      by: currentAdminName,
-      date: new Date().toISOString(),
-      ...additionalInfo,
-    };
-
-    return [...actionHistory, newAction];
+    return [
+      ...actionHistory,
+      {
+        action: actionType,
+        by: currentAdminName,
+        date: new Date().toISOString(),
+        ...additionalInfo,
+      },
+    ];
   };
 
+  // --- Load Reports ---
   const [reports, setReports] = useState(() => {
     try {
       const raw = localStorage.getItem("chmrs_reports");
@@ -72,200 +76,109 @@ export default function SuperAdminPage() {
             }))
           : persisted;
 
-      return finalReports.sort((a, b) => {
-        const dateA = new Date(a.date || 0);
-        const dateB = new Date(b.date || 0);
-        return dateB - dateA;
-      });
+      return finalReports.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
     } catch (e) {
-      console.error("Failed to load persisted reports", e);
+      console.error("Failed to load reports", e);
       return reportsFromState || [];
     }
   });
 
+  // --- Save Reports ---
   useEffect(() => {
     try {
       localStorage.setItem("chmrs_reports", JSON.stringify(reports));
     } catch (e) {
-      console.error("Failed to save reports to localStorage", e);
+      console.error("Failed to save reports", e);
     }
   }, [reports]);
 
+  // --- Action Handlers ---
   const handleDelete = (index) => {
     if (!window.confirm("Are you sure you want to delete this report?")) return;
     setReports((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleAccept = () => {
-    if (selectedIndex !== null) {
-      setReports((prev) =>
-        prev.map((report, i) =>
-          i === selectedIndex
-            ? {
-                ...report,
-                status: "Under Review",
-                actionHistory: addActionToHistory(report, "Accepted"),
-              }
-            : report
-        )
-      );
-      setShowModal(false);
-      setSelectedReport(null);
-      setSelectedIndex(null);
-    }
-  };
-
-  const handleMarkInProgress = () => {
-    if (selectedIndex !== null) {
-      const finalAssignedTo =
-        assignedTo === "Others" ? customDepartment.trim() : assignedTo;
-
-      if (!finalAssignedTo) {
-        alert(
-          "Please assign a worker or department before marking as In Progress."
-        );
-        return;
-      }
-      setReports((prev) =>
-        prev.map((report, i) =>
-          i === selectedIndex
-            ? {
-                ...report,
-                status: "In Progress",
-                assignedTo: finalAssignedTo,
-                inProgressDate: new Date().toISOString(),
-                actionHistory: addActionToHistory(
-                  report,
-                  "Marked as In Progress",
-                  {
-                    assignedTo: finalAssignedTo,
-                  }
-                ),
-              }
-            : report
-        )
-      );
-      setShowModal(false);
-      setSelectedReport(null);
-      setSelectedIndex(null);
-      setAssignedTo("");
-      setCustomDepartment("");
-    }
-  };
-
-  const handleMarkResolved = () => {
-    if (selectedIndex !== null) {
-      if (!resolutionDetails.trim()) {
-        alert("Please provide resolution details before marking as Resolved.");
-        return;
-      }
-      setReports((prev) =>
-        prev.map((report, i) =>
-          i === selectedIndex
-            ? {
-                ...report,
-                status: "Resolved",
-                resolutionDetails: resolutionDetails.trim(),
-                resolvedDate: new Date().toISOString(),
-                actionHistory: addActionToHistory(report, "Resolved", {
-                  resolutionDetails: resolutionDetails.trim(),
-                }),
-              }
-            : report
-        )
-      );
-      setShowModal(false);
-      setSelectedReport(null);
-      setSelectedIndex(null);
-      setResolutionDetails("");
-    }
-  };
-
-  const handleMarkInvalid = () => {
-    setInvalidReason(selectedReport?.invalidReason || "");
-    setShowInvalidModal(true);
-  };
-
-  const confirmMarkInvalid = () => {
+  const handleUpdateStatus = (newStatus, extraData = {}) => {
     if (selectedIndex === null) return;
-    if (!invalidReason.trim()) {
-      alert("Please provide a reason for marking this report as invalid.");
-      return;
-    }
-
     setReports((prev) =>
       prev.map((report, i) =>
         i === selectedIndex
           ? {
               ...report,
-              status: "Invalid",
-              invalidReason: invalidReason.trim(),
-              invalidDate: new Date().toISOString(),
-              actionHistory: addActionToHistory(report, "Marked as Invalid", {
-                reason: invalidReason.trim(),
-              }),
+              status: newStatus,
+              ...extraData,
+              actionHistory: addActionToHistory(
+                report, 
+                newStatus === "Under Review" ? "Accepted" : 
+                newStatus === "Invalid" ? "Marked as Invalid" : newStatus, 
+                extraData
+              ),
             }
           : report
       )
     );
-
-    setShowInvalidModal(false);
-    setShowModal(false);
-    setSelectedReport(null);
-    setSelectedIndex(null);
-    setInvalidReason("");
+    closeModal();
   };
 
-  const cancelMarkInvalid = () => {
-    setShowInvalidModal(false);
-    setInvalidReason("");
+  const handleAccept = () => handleUpdateStatus("Under Review");
+
+  const handleMarkInProgress = () => {
+    const finalAssignedTo = assignedTo === "Others" ? customDepartment.trim() : assignedTo;
+    if (!finalAssignedTo) return alert("Please assign a department.");
+    handleUpdateStatus("In Progress", {
+      assignedTo: finalAssignedTo,
+      inProgressDate: new Date().toISOString(),
+    });
+  };
+
+  const handleMarkResolved = () => {
+    if (!resolutionDetails.trim()) return alert("Please enter resolution details.");
+    handleUpdateStatus("Resolved", {
+      resolutionDetails: resolutionDetails.trim(),
+      resolvedDate: new Date().toISOString(),
+    });
+  };
+
+  const handleMarkInvalidStart = () => {
+    setInvalidReason(selectedReport?.invalidReason || "");
+    setShowInvalidModal(true);
+  };
+
+  const confirmMarkInvalid = () => {
+    if (!invalidReason.trim()) return alert("Please enter a reason.");
+    handleUpdateStatus("Invalid", {
+      invalidReason: invalidReason.trim(),
+      invalidDate: new Date().toISOString(),
+    });
   };
 
   const handleReopen = () => {
-    if (selectedIndex !== null) {
-      setReports((prev) =>
-        prev.map((report, i) =>
-          i === selectedIndex
-            ? {
-                ...report,
-                status: "Under Review",
-                invalidReason: undefined,
-                invalidDate: undefined,
-                actionHistory: addActionToHistory(report, "Reopened"),
-              }
-            : report
-        )
-      );
-      setShowModal(false);
-      setSelectedReport(null);
-      setSelectedIndex(null);
-    }
+    if (selectedIndex === null) return;
+    setReports((prev) =>
+      prev.map((report, i) =>
+        i === selectedIndex
+          ? {
+              ...report,
+              status: "Under Review",
+              invalidReason: undefined,
+              invalidDate: undefined,
+              actionHistory: addActionToHistory(report, "Reopened"),
+            }
+          : report
+      )
+    );
+    closeModal();
   };
 
+  // --- Modal Control ---
   const openModal = (report, index) => {
     setSelectedReport(report);
     setSelectedIndex(index);
     setShowModal(true);
-
-    if (report.assignedTo) {
-      const predefinedDepts = [
-        "Construction Department",
-        "Garbage Collector",
-        "Electrical Department",
-        "Water Department",
-      ];
-      if (predefinedDepts.includes(report.assignedTo)) {
-        setAssignedTo(report.assignedTo);
-        setCustomDepartment("");
-      } else {
-        setAssignedTo("Others");
-        setCustomDepartment(report.assignedTo);
-      }
-    }
-
-    if (report.resolutionDetails)
-      setResolutionDetails(report.resolutionDetails);
-    if (report.invalidReason) setInvalidReason(report.invalidReason);
+    setAssignedTo(report.assignedTo || "");
+    setCustomDepartment("");
+    setResolutionDetails(report.resolutionDetails || "");
+    setInvalidReason(report.invalidReason || "");
   };
 
   const closeModal = () => {
@@ -279,60 +192,100 @@ export default function SuperAdminPage() {
     setShowInvalidModal(false);
   };
 
-  const handleFilterChange = (filter) => {
-    setActiveFilter(filter);
+  // --- NEW: Filter Logic ---
+  const checkDateFilter = (reportDate) => {
+    if (!reportDate) return false;
+    const rDate = new Date(reportDate);
+    if (isNaN(rDate.getTime())) return false;
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const rDay = new Date(rDate.getFullYear(), rDate.getMonth(), rDate.getDate());
+
+    if (dateFilter === "All Time") return true;
+    if (dateFilter === "Today") return rDay.getTime() === today.getTime();
+    if (dateFilter === "This Week") {
+      const start = new Date(today); start.setDate(today.getDate() - today.getDay());
+      const end = new Date(today); end.setDate(today.getDate() + (6 - today.getDay()));
+      return rDay >= start && rDay <= end;
+    }
+    if (dateFilter === "This Month") return rDate.getMonth() === now.getMonth() && rDate.getFullYear() === now.getFullYear();
+    return true;
   };
 
   const filteredReports = reports.filter((report) => {
-    if (activeFilter === "All") return true;
-    return (report.status || "Submitted") === activeFilter;
+    if (!report) return false;
+    // 1. Status
+    const matchesStatus = activeFilter === "All" || (report.status || "Submitted") === activeFilter;
+    // 2. Date
+    const matchesDate = checkDateFilter(report.date);
+    // 3. Search
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q || 
+      (report.hazard || "").toLowerCase().includes(q) || 
+      (report.reportId || "").toString().includes(q) ||
+      (report.date && new Date(report.date).toLocaleDateString().includes(q));
+
+    return matchesStatus && matchesDate && matchesSearch;
   });
 
-  const filterOptions = [
-    "All",
-    "Submitted",
-    "Under Review",
-    "In Progress",
-    "Resolved",
-    "Invalid",
-  ];
-
-  const getFilterColorClasses = (filter) => {
-    switch (filter) {
-      case "All":
-        return "bg-[#01165A] text-white hover:bg-[#001d79]";
-      case "Submitted":
-        return "bg-[#01165A] text-white hover:bg-[#001d79]";
-      case "Under Review":
-        return "bg-[#01165A] text-white hover:bg-[#001d79]";
-      case "In Progress":
-        return "bg-[#01165A] text-white hover:bg-[#001d79]";
-      case "Resolved":
-        return "bg-[#01165A] text-white hover:bg-[#001d79]";
-      case "Invalid":
-        return "bg-[#01165A] text-white hover:bg-[#001d79]";
-      default:
-        return "bg-[#01165A] text-white hover:bg-[#001d79]";
-    }
-  };
+  const filterOptions = ["All", "Submitted", "Under Review", "In Progress", "Resolved", "Invalid"];
+  const dateOptions = ["All Time", "Today", "This Week", "This Month"];
 
   return (
     <>
-      {/* SIDEBAR */}
+      {/* SIDEBAR - Role is explicitly 'superadmin' */}
       <AdminSidebar role="superadmin" />
 
-      {/* CONTENT */}
       <div className="ml-82 mt-12 p-4">
-        <div className="flex justify-center mb-8">
-          <div className="flex gap-x-5 p-1 rounded-full">
+        
+        {/* --- 1. NEW SEARCH & DATE SECTION --- */}
+        <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-sm mb-6 max-w-4xl mx-auto border border-gray-100">
+          {/* Search Input */}
+          <div className="relative w-full md:w-1/3 mb-4 md:mb-0">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              placeholder="Search ID, Hazard, Date..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          {/* Date Buttons */}
+          <div className="flex bg-gray-100 p-1 rounded-lg">
+            {dateOptions.map((option) => (
+              <button
+                key={option}
+                onClick={() => setDateFilter(option)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  dateFilter === option
+                    ? "bg-[#01165A] text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-200"
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* --- 2. STATUS BUTTONS --- */}
+        <div className="flex justify-center mb-8 overflow-x-auto">
+          <div className="flex gap-x-2 md:gap-x-5 p-1">
             {filterOptions.map((filter) => (
               <button
                 key={filter}
-                onClick={() => handleFilterChange(filter)}
-                className={`text-sm px-6 font-bold py-4 rounded-full transition duration-150 ease-in-out ${
+                onClick={() => setActiveFilter(filter)}
+                className={`text-sm px-4 py-2 md:px-6 md:py-4 font-bold rounded-full transition-colors whitespace-nowrap ${
                   activeFilter === filter
                     ? "bg-white text-[#01165A] shadow-md"
-                    : getFilterColorClasses(filter)
+                    : "bg-[#01165A] text-white hover:bg-[#001d79]"
                 }`}
               >
                 {filter}
@@ -341,504 +294,194 @@ export default function SuperAdminPage() {
           </div>
         </div>
 
-        {/* Centered container for reports */}
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-1 gap-y-6">
-            {filteredReports.length === 0 && (
-              <p className="text-gray-500 text-center mt-10">
-                No reports found for the status: {activeFilter}
-              </p>
-            )}
-
-            {filteredReports.map((report, index) => (
-              <div
-                key={report.reportId}
-                className="bg-white rounded-2xl p-6 shadow-[0px_5px_5px_rgba(0,0,0,0.25)] hover:shadow-[0px_10px_15px_rgba(0,0,0,0.25)] transition"
-              >
-                <div className="flex items-baseline gap-x-3">
-                  <h1 className="font-bold uppercase">{report.hazard}</h1>
-
-                  <h1
-                    className={
-                      `px-3 rounded-full text-white ` +
-                      (report.severity === "Minor"
-                        ? "bg-yellow-500 border-yellow-600"
-                        : report.severity === "Moderate"
-                        ? "bg-orange-500 border-orange-600"
-                        : "bg-red-500 border-red-600")
-                    }
-                  >
+        {/* --- 3. REPORT LIST --- */}
+        <div className="max-w-4xl mx-auto space-y-6">
+          {filteredReports.length === 0 ? (
+             <div className="text-center p-10 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+               <p className="text-gray-500">No reports found matching your criteria.</p>
+               <button 
+                 onClick={() => { setSearchQuery(""); setActiveFilter("All"); setDateFilter("All Time"); }}
+                 className="mt-2 text-blue-600 underline text-sm hover:text-blue-800"
+               >
+                 Clear Filters
+               </button>
+             </div>
+          ) : (
+            filteredReports.map((report, index) => (
+              <div key={report.reportId} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition border border-gray-100">
+                {/* Header */}
+                <div className="flex flex-wrap items-baseline gap-3 mb-2">
+                  <h3 className="font-bold text-lg uppercase">{report.hazard}</h3>
+                  <span className={`px-2 py-0.5 rounded-full text-xs text-white ${
+                    report.severity === "Minor" ? "bg-yellow-500" :
+                    report.severity === "Moderate" ? "bg-orange-500" : "bg-red-500"
+                  }`}>
                     {report.severity}
-                  </h1>
-
-                  <h1 className="text-black/50">
-                    Report ID: {report.reportId}
-                  </h1>
+                  </span>
+                  <span className="text-xs text-gray-400">ID: {report.reportId}</span>
                 </div>
 
-                {report.status && (
-                  <div className="flex items-center mt-2 mb-4">
-                    <span className="text-black mr-1 font-bold">Status:</span>
-                    <span
-                      className={`px-2 rounded-full font-medium ${
-                        (report.status || "Submitted") === "Submitted"
-                          ? "text-blue-700 bg-blue-100"
-                          : report.status === "Under Review"
-                          ? "text-orange-700 bg-orange-100"
-                          : report.status === "In Progress"
-                          ? "text-white bg-amber-400"
-                          : report.status === "Resolved"
-                          ? "text-green-700 bg-green-100"
-                          : report.status === "Invalid"
-                          ? "text-red-700 bg-red-100"
-                          : "text-gray-600 bg-gray-100"
-                      }`}
-                    >
-                      {report.status || "Submitted"}
-                    </span>
-                  </div>
-                )}
+                {/* Status */}
+                <div className="mb-3">
+                   <span className="text-sm font-bold text-gray-700 mr-2">Status:</span>
+                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                     (report.status || "Submitted") === "Submitted" ? "bg-blue-100 text-blue-800" :
+                     report.status === "Under Review" ? "bg-orange-100 text-orange-800" :
+                     report.status === "In Progress" ? "bg-amber-100 text-amber-800" :
+                     report.status === "Resolved" ? "bg-green-100 text-green-800" :
+                     "bg-red-100 text-red-800"
+                   }`}>
+                     {report.status || "Submitted"}
+                   </span>
+                </div>
 
-                <p className="text-black/60 mb-4">
-                  {report.description && report.description.length > 100
-                    ? report.description.substring(0, 60) + "..."
-                    : report.description}
-                </p>
-                <h1 className="text-sm text-black/50">
-                  Date:{" "}
-                  {report.date
-                    ? new Date(report.date).toLocaleString()
-                    : new Date().toLocaleDateString()}
-                </h1>
+                <p className="text-gray-600 mb-4 line-clamp-2 text-sm">{report.description}</p>
+                <div className="text-xs text-gray-400 mb-4">
+                  {report.date ? new Date(report.date).toLocaleString() : "No Date"}
+                </div>
 
-                <div className="flex gap-2 items-center mt-2">
-                  <button
-                    onClick={() => openModal(report, index)}
-                    className="text-sm text-blue-700 rounded-md cursor-pointer hover:underline"
-                  >
-                    See more
+                <div className="flex gap-3">
+                  <button onClick={() => openModal(report, index)} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                    See Details
                   </button>
-
-                  <button
-                    onClick={() => handleDelete(index)}
-                    className="text-sm text-red-600 hover:text-red-800 bg-red-50 px-3 py-1 rounded-md"
-                  >
+                  <button onClick={() => handleDelete(index)} className="text-sm text-red-500 hover:text-red-700 bg-red-50 px-3 py-1 rounded">
                     Delete
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
+            ))
+          )}
         </div>
       </div>
 
-      {/* MODALS - Different content based on status */}
+      {/* --- MODAL --- */}
       {showModal && selectedReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg p-6 w-11/12 max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-baseline gap-x-3">
-              <h3 className="text-lg font-semibold">{selectedReport.hazard}</h3>
-              <h1
-                className={
-                  `px-3 rounded-full text-white text-sm ` +
-                  (selectedReport.severity === "Minor"
-                    ? "bg-yellow-500 border-yellow-600"
-                    : selectedReport.severity === "Moderate"
-                    ? "bg-orange-500 border-orange-600"
-                    : "bg-red-500 border-red-600")
-                }
-              >
-                {selectedReport.severity}
-              </h1>
-            </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-xl font-bold">{selectedReport.hazard}</h2>
+                  <p className="text-sm text-gray-500">ID: {selectedReport.reportId}</p>
+                </div>
+                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
 
-            <div className="mt-1">
-              <div className="flex items-baseline">
-                <strong>Status:</strong>
-                <div
-                  className={`ml-1 text-sm px-2 rounded-full ${
-                    (selectedReport.status || "Submitted") === "Submitted"
-                      ? "text-blue-700 bg-blue-100"
-                      : selectedReport.status === "Under Review"
-                      ? "text-orange-700 bg-orange-100"
-                      : selectedReport.status === "In Progress"
-                      ? "text-white bg-amber-400"
-                      : selectedReport.status === "Resolved"
-                      ? "text-green-700 bg-green-100"
-                      : selectedReport.status === "Invalid"
-                      ? "text-red-700 bg-red-100"
-                      : "text-gray-700"
-                  }`}
-                >
+              {/* Status */}
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg flex items-center gap-2">
+                <span className="font-semibold text-sm">Current Status:</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                   (selectedReport.status || "Submitted") === "Submitted" ? "bg-blue-100 text-blue-800" :
+                   selectedReport.status === "Under Review" ? "bg-orange-100 text-orange-800" :
+                   selectedReport.status === "In Progress" ? "bg-amber-100 text-amber-800" :
+                   selectedReport.status === "Resolved" ? "bg-green-100 text-green-800" :
+                   "bg-red-100 text-red-800"
+                }`}>
                   {selectedReport.status || "Submitted"}
-                </div>
+                </span>
               </div>
-              <p className="text-sm text-gray-600 my-3">
-                {selectedReport.description}
-              </p>
-              {/* ACTION HISTORY SECTION */}
-              {selectedReport.actionHistory &&
-                selectedReport.actionHistory.length > 0 && (
-                  <div className="my-4 p-4 bg-blue-50 rounded-md border border-blue-200">
-                    <strong className="text-blue-800 flex items-center gap-2">
-                      Action History:
-                    </strong>
-                    <div className="mt-3 space-y-2">
-                      {selectedReport.actionHistory.map((action, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-start gap-2 text-sm"
-                        >
-                          <div className="flex-1">
-                            <span className="font-medium text-gray-800">
-                              {action.action}
-                            </span>
-                            <span className="text-gray-600"> by </span>
-                            <span className="font-medium text-blue-700">
-                              {action.by}
-                            </span>
-                            {action.assignedTo && (
-                              <span className="text-gray-600">
-                                {" "}
-                                (Assigned to: {action.assignedTo})
-                              </span>
-                            )}
-                            <div className="text-xs text-gray-500 mt-0.5">
-                              {new Date(action.date).toLocaleString()}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+
+              {/* Info */}
+              <div className="mt-4 space-y-4">
+                <div>
+                  <h4 className="text-sm font-bold text-gray-700">Description</h4>
+                  <p className="text-sm text-gray-600 mt-1">{selectedReport.description}</p>
+                </div>
+                
+                {/* Map */}
+                {selectedReport.location?.lat && (
+                  <div className="h-48 w-full rounded-lg overflow-hidden border border-gray-200">
+                    <MapContainer center={[selectedReport.location.lat, selectedReport.location.lng]} zoom={15} style={{height:"100%", width:"100%"}} scrollWheelZoom={false}>
+                      <TileLayer url={osm.maptiler.url} attribution={osm.maptiler.attribution}/>
+                      <Marker position={[selectedReport.location.lat, selectedReport.location.lng]} />
+                    </MapContainer>
                   </div>
                 )}
-              {/* Map Display */}
-              {selectedReport.location &&
-                selectedReport.location.lat &&
-                selectedReport.location.lng && (
-                  <div className="my-4">
-                    <strong>Location:</strong>
-                    <div className="mt-2 h-[300px] border-2 border-gray-300 rounded-lg overflow-hidden">
-                      <MapContainer
-                        center={[
-                          selectedReport.location.lat,
-                          selectedReport.location.lng,
-                        ]}
-                        zoom={17}
-                        style={{ height: "100%", width: "100%" }}
-                        scrollWheelZoom={false}
-                      >
-                        <TileLayer
-                          url={osm.maptiler.url}
-                          attribution={osm.maptiler.attribution}
-                        />
-                        <Marker
-                          position={[
-                            selectedReport.location.lat,
-                            selectedReport.location.lng,
-                          ]}
-                        />
-                      </MapContainer>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Coordinates: {selectedReport.location.lat.toFixed(6)},{" "}
-                      {selectedReport.location.lng.toFixed(6)}
-                    </p>
+
+                {/* Photos */}
+                {selectedReport.photos?.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {selectedReport.photos.map((p, i) => (
+                      <div key={i} className="h-24 bg-gray-100 rounded overflow-hidden border">
+                         {p.data ? <img src={p.data} className="w-full h-full object-cover" alt="evidence"/> : <div className="p-2 text-xs">{typeof p === 'string' ? p : 'Image'}</div>}
+                      </div>
+                    ))}
                   </div>
                 )}
-              {!selectedReport.location && (
-                <div className="my-2">
-                  <strong>Location:</strong>
-                  <div className="text-sm text-gray-500 mt-1">
-                    No location selected
-                  </div>
-                </div>
-              )}
-              <div>
-                <strong>Photos:</strong>
-                {selectedReport.photos && selectedReport.photos.length > 0 ? (
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    {selectedReport.photos.map((photo, i) => {
-                      // Handle both old format (string filenames) and new format (objects with base64 data)
-                      if (typeof photo === "string") {
-                        // Old format - just show filename
-                        return (
-                          <div
-                            key={i}
-                            className="text-sm text-gray-700 p-2 bg-gray-50 rounded"
-                          >
-                            {photo}
-                          </div>
-                        );
-                      } else if (photo.data) {
-                        // New format - show actual image
-                        return (
-                          <div key={i} className="relative group">
-                            <img
-                              src={photo.data}
-                              alt={photo.name}
-                              className="w-full h-40 object-cover rounded-lg border-2"
-                              onClick={() => window.open(photo.data, "_blank")}
-                            />
-                            <div className="mt-1 text-xs text-gray-500 truncate">
-                              {photo.name}
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-500 mt-1">
-                    No photos attached
-                  </div>
+
+                {/* History */}
+                {selectedReport.actionHistory?.length > 0 && (
+                   <div className="bg-blue-50 p-3 rounded text-xs space-y-1 max-h-32 overflow-y-auto">
+                     <p className="font-bold text-blue-800 mb-1">History:</p>
+                     {selectedReport.actionHistory.map((act, i) => (
+                       <div key={i} className="flex justify-between text-gray-600">
+                         <span>{act.action} <span className="text-gray-400">by {act.by}</span></span>
+                         <span>{new Date(act.date).toLocaleDateString()}</span>
+                       </div>
+                     ))}
+                   </div>
                 )}
               </div>
-              <div className="mt-2">
-                <strong>Date:</strong>
-                <div className="text-sm text-gray-700">
-                  {selectedReport.date
-                    ? new Date(selectedReport.date).toLocaleString()
-                    : "N/A"}
+
+              {/* ACTION INPUTS */}
+              <div className="mt-6 border-t pt-4">
+                {selectedReport.status === "Under Review" && (
+                   <div className="bg-orange-50 p-3 rounded mb-3">
+                     <label className="text-xs font-bold text-orange-800 block mb-1">Assign Department</label>
+                     <select className="w-full text-sm p-2 border rounded" value={assignedTo} onChange={e => setAssignedTo(e.target.value)}>
+                       <option value="">Select...</option>
+                       <option>Construction Department</option>
+                       <option>Garbage Collector</option>
+                       <option>Electrical Department</option>
+                       <option>Water Department</option>
+                       <option>Others</option>
+                     </select>
+                     {assignedTo === "Others" && <input className="w-full mt-2 text-sm p-2 border rounded" placeholder="Type department name..." value={customDepartment} onChange={e => setCustomDepartment(e.target.value)} />}
+                   </div>
+                )}
+                
+                {selectedReport.status === "In Progress" && (
+                  <div className="bg-green-50 p-3 rounded mb-3">
+                    <label className="text-xs font-bold text-green-800 block mb-1">Resolution Details</label>
+                    <textarea className="w-full text-sm p-2 border rounded" rows="3" placeholder="What actions were taken?" value={resolutionDetails} onChange={e => setResolutionDetails(e.target.value)} />
+                  </div>
+                )}
+
+                {/* ACTION BUTTONS */}
+                <div className="flex flex-wrap gap-2">
+                   {selectedReport.status === "Submitted" && <button onClick={handleAccept} className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700">Accept</button>}
+                   
+                   {selectedReport.status === "Under Review" && <button onClick={handleMarkInProgress} className="px-4 py-2 bg-amber-500 text-white rounded text-sm hover:bg-amber-600">Mark In Progress</button>}
+                   
+                   {selectedReport.status === "In Progress" && <button onClick={handleMarkResolved} className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700">Mark Resolved</button>}
+                   
+                   {["Resolved", "Invalid"].includes(selectedReport.status) && <button onClick={handleReopen} className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">Reopen</button>}
+                   
+                   {!["Resolved", "Invalid"].includes(selectedReport.status || "") && <button onClick={handleMarkInvalidStart} className="px-4 py-2 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200">Invalid</button>}
+                   
+                   <button onClick={closeModal} className="ml-auto px-4 py-2 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300">Close</button>
                 </div>
               </div>
-              {/* Show assigned worker and in progress date for In Progress and Resolved statuses */}
-              {(selectedReport.status === "In Progress" ||
-                selectedReport.status === "Resolved") && (
-                <>
-                  {selectedReport.assignedTo && (
-                    <div className="mt-2">
-                      <strong>Assigned To:</strong>
-                      <div className="text-sm text-gray-700">
-                        {selectedReport.assignedTo}
-                      </div>
-                    </div>
-                  )}
-                  {selectedReport.inProgressDate && (
-                    <div className="mt-2">
-                      <strong>Marked In Progress:</strong>
-                      <div className="text-sm text-gray-700">
-                        {new Date(
-                          selectedReport.inProgressDate
-                        ).toLocaleString()}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-              {/* Additional fields for "Under Review" status */}
-              {selectedReport.status === "Under Review" && (
-                <div className="mt-4 p-3 bg-orange-50 rounded-md">
-                  <div>
-                    <strong className="text-orange-800">Assign To:</strong>
-                    <select
-                      value={assignedTo}
-                      onChange={(e) => {
-                        setAssignedTo(e.target.value);
-                        if (e.target.value !== "Others") {
-                          setCustomDepartment("");
-                        }
-                      }}
-                      className="w-full mt-2 p-2 border border-orange-200 rounded-md text-sm"
-                    >
-                      <option value="">Select department...</option>
-                      <option value="Construction Department">
-                        Construction Department
-                      </option>
-                      <option value="Garbage Collector">
-                        Garbage Collector
-                      </option>
-                      <option value="Electrical Department">
-                        Electrical Department
-                      </option>
-                      <option value="Water Department">Water Department</option>
-                      <option value="Others">Others</option>
-                    </select>
-
-                    {assignedTo === "Others" && (
-                      <input
-                        type="text"
-                        value={customDepartment}
-                        onChange={(e) => setCustomDepartment(e.target.value)}
-                        className="w-full mt-2 p-2 border border-orange-200 rounded-md text-sm"
-                        placeholder="Enter custom department name..."
-                      />
-                    )}
-                  </div>
-                </div>
-              )}
-              {/* Additional fields for "In Progress" status */}
-              {selectedReport.status === "In Progress" && (
-                <div className="mt-4 p-3 bg-green-100 rounded-md">
-                  <strong className="text-green-900">
-                    Resolution Details:
-                  </strong>
-                  <textarea
-                    value={resolutionDetails}
-                    onChange={(e) => setResolutionDetails(e.target.value)}
-                    className="w-full mt-2 p-2 border border-white rounded-md text-sm"
-                    rows="4"
-                    placeholder="Enter resolution details, actions taken, etc..."
-                  />
-                </div>
-              )}
-              {/* Additional fields for "Resolved" status */}
-              {selectedReport.status === "Resolved" && (
-                <div className="mt-4 p-3 bg-green-50 rounded-md">
-                  <strong className="text-green-800">
-                    Resolution Details:
-                  </strong>
-                  <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
-                    {selectedReport.resolutionDetails || "No details provided"}
-                  </p>
-                  <div className="mt-2">
-                    <strong className="text-green-800">Resolved Date:</strong>
-                    <div className="text-sm text-gray-700">
-                      {selectedReport.resolvedDate
-                        ? new Date(selectedReport.resolvedDate).toLocaleString()
-                        : "N/A"}
-                    </div>
-                  </div>
-                </div>
-              )}
-              {/* Additional fields for "Invalid" status */}
-              {selectedReport.status === "Invalid" && (
-                <div className="mt-4 p-3 bg-red-50 rounded-md">
-                  <strong className="text-red-800">
-                    Reason for Invalidity:
-                  </strong>
-                  <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
-                    {selectedReport.invalidReason ||
-                      "This report has been marked as invalid by the admin team."}
-                  </p>
-                  {selectedReport.invalidDate && (
-                    <div className="mt-2">
-                      <strong className="text-red-800">Marked Invalid:</strong>
-                      <div className="text-sm text-gray-700">
-                        {new Date(selectedReport.invalidDate).toLocaleString()}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Dynamic Action Buttons based on Status */}
-            <div className="mt-6 flex justify-start gap-x-2 flex-wrap">
-              {selectedReport.status === "Submitted" && (
-                <>
-                  <button
-                    onClick={handleAccept}
-                    className="px-4 py-2 bg-[#00BC3A] text-white rounded-md cursor-pointer hover:bg-[#009d30]"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={handleMarkInvalid}
-                    className="px-4 py-2 bg-[#a52c2c] text-white rounded-md cursor-pointer hover:bg-[#8a2424]"
-                  >
-                    Mark as Invalid
-                  </button>
-                </>
-              )}
-
-              {selectedReport.status === "Under Review" && (
-                <>
-                  <button
-                    onClick={handleMarkInProgress}
-                    className="px-4 py-2 bg-amber-400 text-white rounded-md cursor-pointer hover:bg-amber-500"
-                  >
-                    Mark as In Progress
-                  </button>
-                  <button
-                    onClick={handleMarkInvalid}
-                    className="px-4 py-2 bg-[#a52c2c] text-white rounded-md cursor-pointer hover:bg-[#8a2424]"
-                  >
-                    Mark as Invalid
-                  </button>
-                </>
-              )}
-
-              {selectedReport.status === "In Progress" && (
-                <>
-                  <button
-                    onClick={handleMarkResolved}
-                    className="px-4 py-2 bg-[#00BC3A] text-white rounded-md cursor-pointer hover:bg-[#009d30]"
-                  >
-                    Mark as Resolved
-                  </button>
-                  <button
-                    onClick={handleMarkInvalid}
-                    className="px-4 py-2 bg-[#a52c2c] text-white rounded-md cursor-pointer hover:bg-[#8a2424]"
-                  >
-                    Mark as Invalid
-                  </button>
-                </>
-              )}
-
-              {selectedReport.status === "Resolved" && (
-                <button
-                  onClick={handleReopen}
-                  className="px-4 py-2 bg-orange-500 text-white rounded-md cursor-pointer hover:bg-orange-600"
-                >
-                  Reopen Report
-                </button>
-              )}
-
-              {selectedReport.status === "Invalid" && (
-                <button
-                  onClick={handleReopen}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md cursor-pointer hover:bg-blue-600"
-                >
-                  Reopen as Under Review
-                </button>
-              )}
-
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 bg-[#01165A] text-white rounded-md cursor-pointer hover:bg-[#012050]"
-              >
-                Close
-              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Invalid-reason modal */}
-      {showInvalidModal && selectedReport && (
+      {/* Invalid Reason Modal */}
+      {showInvalidModal && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg p-6 w-11/12 max-w-lg max-h-[80vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold">
-              Reason to mark report as Invalid
-            </h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Please enter a short reason explaining why this report is invalid.
-            </p>
-
-            <textarea
-              value={invalidReason}
-              onChange={(e) => setInvalidReason(e.target.value)}
-              className="w-full mt-4 p-3 border border-gray-200 rounded-md text-sm h-36 resize-y"
-              placeholder="Enter reason here..."
-            />
-
-            <div className="mt-4 flex items-center gap-x-2 justify-end">
-              <button
-                onClick={cancelMarkInvalid}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmMarkInvalid}
-                className="px-4 py-2 bg-[#a52c2c] text-white rounded-md cursor-pointer hover:bg-[#8a2424]"
-              >
-                Confirm & Mark Invalid
-              </button>
-            </div>
-          </div>
+           <div className="bg-white p-6 rounded-lg w-full max-w-sm shadow-xl">
+              <h3 className="font-bold text-lg mb-2">Mark as Invalid</h3>
+              <p className="text-sm text-gray-500 mb-3">Please specify why this report is being rejected.</p>
+              <textarea className="w-full border p-2 rounded text-sm h-24 mb-4" placeholder="Reason..." value={invalidReason} onChange={e => setInvalidReason(e.target.value)} />
+              <div className="flex justify-end gap-2">
+                 <button onClick={() => {setShowInvalidModal(false); setInvalidReason("");}} className="px-3 py-1.5 text-gray-600 bg-gray-100 rounded text-sm">Cancel</button>
+                 <button onClick={confirmMarkInvalid} className="px-3 py-1.5 text-white bg-red-600 rounded text-sm">Confirm</button>
+              </div>
+           </div>
         </div>
       )}
     </>
