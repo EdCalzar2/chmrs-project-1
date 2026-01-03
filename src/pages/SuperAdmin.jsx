@@ -30,6 +30,9 @@ export default function SuperAdminPage() {
   const [invalidReason, setInvalidReason] = useState("");
 
   const [activeFilter, setActiveFilter] = useState("All");
+  // NEW: Search and Date Filter States
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateFilter, setDateFilter] = useState("All Time");
 
   // Function to generate random report ID
   const generateReportId = () => {
@@ -283,9 +286,57 @@ export default function SuperAdminPage() {
     setActiveFilter(filter);
   };
 
+  // NEW: Date Filter Logic
+  const checkDateFilter = (reportDate) => {
+    if (!reportDate) return false;
+    const rDate = new Date(reportDate);
+    if (isNaN(rDate.getTime())) return false;
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const rDay = new Date(
+      rDate.getFullYear(),
+      rDate.getMonth(),
+      rDate.getDate()
+    );
+
+    if (dateFilter === "All Time") return true;
+    if (dateFilter === "Today") return rDay.getTime() === today.getTime();
+    if (dateFilter === "This Week") {
+      const start = new Date(today);
+      start.setDate(today.getDate() - today.getDay());
+      const end = new Date(today);
+      end.setDate(today.getDate() + (6 - today.getDay()));
+      return rDay >= start && rDay <= end;
+    }
+    if (dateFilter === "This Month") {
+      return (
+        rDate.getMonth() === now.getMonth() &&
+        rDate.getFullYear() === now.getFullYear()
+      );
+    }
+    return true;
+  };
+
   const filteredReports = reports.filter((report) => {
-    if (activeFilter === "All") return true;
-    return (report.status || "Submitted") === activeFilter;
+    if (!report) return false;
+
+    // 1. Status Filter
+    const matchesStatus =
+      activeFilter === "All" || (report.status || "Submitted") === activeFilter;
+
+    // 2. Date Filter
+    const matchesDate = checkDateFilter(report.date);
+
+    // 3. Search Filter
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      !q ||
+      (report.hazard || "").toLowerCase().includes(q) ||
+      (report.reportId || "").toString().includes(q) ||
+      (report.date && new Date(report.date).toLocaleDateString().includes(q));
+
+    return matchesStatus && matchesDate && matchesSearch;
   });
 
   const filterOptions = [
@@ -296,6 +347,8 @@ export default function SuperAdminPage() {
     "Resolved",
     "Invalid",
   ];
+
+  const dateOptions = ["All Time", "Today", "This Week", "This Month"];
 
   const getFilterColorClasses = (filter) => {
     switch (filter) {
@@ -323,6 +376,51 @@ export default function SuperAdminPage() {
 
       {/* CONTENT */}
       <div className="ml-82 mt-12 p-4">
+        {/* NEW: SEARCH & DATE FILTER SECTION */}
+        <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-sm mb-6 max-w-4xl mx-auto border border-gray-100">
+          {/* Search Input */}
+          <div className="relative w-full md:w-1/3 mb-4 md:mb-0">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg
+                className="h-5 w-5 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              placeholder="Search ID, Hazard, Date..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          {/* Date Filter Buttons */}
+          <div className="flex bg-gray-100 p-1 rounded-lg">
+            {dateOptions.map((option) => (
+              <button
+                key={option}
+                onClick={() => setDateFilter(option)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  dateFilter === option
+                    ? "bg-[#01165A] text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-200"
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex justify-center mb-8">
           <div className="flex gap-x-5 p-1 rounded-full">
             {filterOptions.map((filter) => (
@@ -345,9 +443,21 @@ export default function SuperAdminPage() {
         <div className="max-w-4xl mx-auto">
           <div className="grid grid-cols-1 gap-y-6">
             {filteredReports.length === 0 && (
-              <p className="text-gray-500 text-center mt-10">
-                No reports found for the status: {activeFilter}
-              </p>
+              <div className="text-center p-10 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                <p className="text-gray-500 mb-2">
+                  No reports found matching your criteria.
+                </p>
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setActiveFilter("All");
+                    setDateFilter("All Time");
+                  }}
+                  className="mt-2 text-blue-600 underline text-sm hover:text-blue-800"
+                >
+                  Clear All Filters
+                </button>
+              </div>
             )}
 
             {filteredReports.map((report, index) => (
