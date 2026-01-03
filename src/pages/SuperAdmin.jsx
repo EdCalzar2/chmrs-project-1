@@ -24,6 +24,7 @@ export default function SuperAdminPage() {
   const [selectedReport, setSelectedReport] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [assignedTo, setAssignedTo] = useState("");
+  const [customDepartment, setCustomDepartment] = useState(""); // ADD THIS LINE
   const [resolutionDetails, setResolutionDetails] = useState("");
   const [showInvalidModal, setShowInvalidModal] = useState(false);
   const [invalidReason, setInvalidReason] = useState("");
@@ -116,7 +117,10 @@ export default function SuperAdminPage() {
 
   const handleMarkInProgress = () => {
     if (selectedIndex !== null) {
-      if (!assignedTo.trim()) {
+      const finalAssignedTo =
+        assignedTo === "Others" ? customDepartment.trim() : assignedTo;
+
+      if (!finalAssignedTo) {
         alert(
           "Please assign a worker or department before marking as In Progress."
         );
@@ -128,13 +132,13 @@ export default function SuperAdminPage() {
             ? {
                 ...report,
                 status: "In Progress",
-                assignedTo: assignedTo.trim(),
+                assignedTo: finalAssignedTo,
                 inProgressDate: new Date().toISOString(),
                 actionHistory: addActionToHistory(
                   report,
                   "Marked as In Progress",
                   {
-                    assignedTo: assignedTo.trim(),
+                    assignedTo: finalAssignedTo,
                   }
                 ),
               }
@@ -145,6 +149,7 @@ export default function SuperAdminPage() {
       setSelectedReport(null);
       setSelectedIndex(null);
       setAssignedTo("");
+      setCustomDepartment("");
     }
   };
 
@@ -241,7 +246,23 @@ export default function SuperAdminPage() {
     setSelectedReport(report);
     setSelectedIndex(index);
     setShowModal(true);
-    if (report.assignedTo) setAssignedTo(report.assignedTo);
+
+    if (report.assignedTo) {
+      const predefinedDepts = [
+        "Construction Department",
+        "Garbage Collector",
+        "Electrical Department",
+        "Water Department",
+      ];
+      if (predefinedDepts.includes(report.assignedTo)) {
+        setAssignedTo(report.assignedTo);
+        setCustomDepartment("");
+      } else {
+        setAssignedTo("Others");
+        setCustomDepartment(report.assignedTo);
+      }
+    }
+
     if (report.resolutionDetails)
       setResolutionDetails(report.resolutionDetails);
     if (report.invalidReason) setInvalidReason(report.invalidReason);
@@ -252,6 +273,7 @@ export default function SuperAdminPage() {
     setSelectedReport(null);
     setSelectedIndex(null);
     setAssignedTo("");
+    setCustomDepartment("");
     setResolutionDetails("");
     setInvalidReason("");
     setShowInvalidModal(false);
@@ -610,13 +632,39 @@ export default function SuperAdminPage() {
                 <div className="mt-4 p-3 bg-orange-50 rounded-md">
                   <div>
                     <strong className="text-orange-800">Assign To:</strong>
-                    <input
-                      type="text"
+                    <select
                       value={assignedTo}
-                      onChange={(e) => setAssignedTo(e.target.value)}
-                      className="w-full mt-1 p-2 border border-orange-200 rounded-md text-sm"
-                      placeholder="Enter worker name or department..."
-                    />
+                      onChange={(e) => {
+                        setAssignedTo(e.target.value);
+                        if (e.target.value !== "Others") {
+                          setCustomDepartment("");
+                        }
+                      }}
+                      className="w-full mt-2 p-2 border border-orange-200 rounded-md text-sm"
+                    >
+                      <option value="">Select department...</option>
+                      <option value="Construction Department">
+                        Construction Department
+                      </option>
+                      <option value="Garbage Collector">
+                        Garbage Collector
+                      </option>
+                      <option value="Electrical Department">
+                        Electrical Department
+                      </option>
+                      <option value="Water Department">Water Department</option>
+                      <option value="Others">Others</option>
+                    </select>
+
+                    {assignedTo === "Others" && (
+                      <input
+                        type="text"
+                        value={customDepartment}
+                        onChange={(e) => setCustomDepartment(e.target.value)}
+                        className="w-full mt-2 p-2 border border-orange-200 rounded-md text-sm"
+                        placeholder="Enter custom department name..."
+                      />
+                    )}
                   </div>
                 </div>
               )}
